@@ -58,6 +58,7 @@ function registerIpc(win) {
 
   ipcMain.handle('app:info', () => ({
     devAutologin: !!process.env.DOC_DEV_AUTOLOGIN,
+    testLogin: process.env.DOC_TEST_LOGIN || null,
     initialPage: process.env.DOC_PAGE || null,
     userData: app.getPath('userData'),
   }));

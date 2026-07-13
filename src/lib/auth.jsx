@@ -30,16 +30,37 @@ export const AuthProvider = ({ children }) => {
   const [clinic, setClinic] = useState(null);
   const [notice, setNotice] = useState(null);
 
-  const loadLocal = async (sess) => {
-    const c = await clinicRepo.current();
-    setClinic(c);
-    if (sess?.user) {
-      const u = await userRepo.byAuthId(sess.user.id);
-      setLocalUser(u);
-      return { clinic: c, user: u };
+  // Make sure an authenticated session always has local clinic + user rows.
+  // Covers signing in on a fresh device with an account created elsewhere
+  // (e.g. the Flutter app) — without this the app would silently stay on
+  // the sign-in screen after a successful sign-in.
+  const loadLocal = (sess) => {
+    // Serialize: signIn and onAuthStateChange can both land here at once,
+    // and concurrent runs could each provision a clinic.
+    loadLocal._lock = (loadLocal._lock || Promise.resolve())
+      .then(() => doLoadLocal(sess), () => doLoadLocal(sess));
+    return loadLocal._lock;
+  };
+
+  const doLoadLocal = async (sess) => {
+    let c = await clinicRepo.current();
+    let u = sess?.user ? await userRepo.byAuthId(sess.user.id) : null;
+    if (sess?.user && !c) {
+      const guess = (sess.user.email || 'user').split('@')[0];
+      ({ clinic: c, user: u } = await provisionClinic({
+        clinicName: 'My Clinic', firstName: guess, lastName: '',
+        email: sess.user.email || '', authUserId: sess.user.id,
+      }));
+    } else if (sess?.user && c && !u) {
+      const guess = (sess.user.email || 'user').split('@')[0];
+      u = await userRepo.create({
+        clinic_id: c.id, first_name: guess, last_name: '',
+        email: sess.user.email || '', auth_user_id: sess.user.id, is_clinic_owner: 0,
+      });
     }
-    setLocalUser(null);
-    return { clinic: c, user: null };
+    setClinic(c);
+    setLocalUser(sess?.user ? u : null);
+    return { clinic: c, user: sess?.user ? u : null };
   };
 
   useEffect(() => {
@@ -77,18 +98,10 @@ export const AuthProvider = ({ children }) => {
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // If this device has a clinic but no local user row for this account, attach one.
-    const c = await clinicRepo.current();
-    if (c && data.session) {
-      let u = await userRepo.byAuthId(data.session.user.id);
-      if (!u) {
-        u = await userRepo.create({
-          clinic_id: c.id, first_name: email.split('@')[0], last_name: '',
-          email, auth_user_id: data.session.user.id, is_clinic_owner: 0,
-        });
-      }
-    }
-    await loadLocal(data.session);
+    if (!data.session) throw new Error('Sign-in did not return a session. If you just signed up, confirm your email first.');
+    const { user } = await loadLocal(data.session);
+    if (!user) throw new Error('Signed in, but the local clinic record could not be created.');
+    setSession(data.session);
     return data.session;
   };
 

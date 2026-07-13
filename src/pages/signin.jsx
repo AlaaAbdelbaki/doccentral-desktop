@@ -1,5 +1,5 @@
 // Sign-in / first-run clinic provisioning (FR-1, FR-2).
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { useLang } from '../lib/i18n.jsx';
@@ -12,6 +12,18 @@ export const SignInPage = () => {
   const [error, setError] = useState(null);
   const [form, setForm] = useState({ clinicName: '', firstName: '', lastName: '', email: '', password: '' });
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Dev self-check: DOC_TEST_LOGIN="email:password" drives the real sign-in path.
+  useEffect(() => {
+    window.dc.app.info().then((i) => {
+      if (!i.testLogin) return;
+      const idx = i.testLogin.indexOf(':');
+      setBusy(true);
+      signIn(i.testLogin.slice(0, idx), i.testLogin.slice(idx + 1))
+        .catch((err) => setError(err.message || String(err)))
+        .finally(() => setBusy(false));
+    });
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
