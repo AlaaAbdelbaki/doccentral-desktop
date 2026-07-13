@@ -24,6 +24,7 @@ export const userRepo = {
                    WHERE ur.user_id=u.id AND ur.deleted_at IS NULL LIMIT 1) AS role_name
                    FROM users u WHERE u.${LIVE} ORDER BY u.created_at`),
   create: (fields) => insert('users', fields),
+  update: async (id, patch) => { await update('users', id, patch); emitDataChanged(); },
   ensureRoles: async (clinicId) => {
     for (const name of ['Dentist', 'Assistant', 'Nurse']) {
       const existing = await get(`SELECT id FROM roles WHERE clinic_id=? AND name=?`, [clinicId, name]);

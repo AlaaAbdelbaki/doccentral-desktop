@@ -44,6 +44,39 @@ const AddStaffModal = ({ onClose }) => {
   );
 };
 
+const ProfileSection = () => {
+  const { localUser, refreshUser } = useAuth();
+  const [form, setForm] = useState({ first_name: localUser?.first_name || '', last_name: localUser?.last_name || '' });
+  const [saved, setSaved] = useState(false);
+  const set = (k) => (e) => { setSaved(false); setForm((f) => ({ ...f, [k]: e.target.value })); };
+  const save = async () => {
+    await userRepo.update(localUser.id, { first_name: form.first_name.trim(), last_name: form.last_name.trim() });
+    await refreshUser();
+    setSaved(true);
+  };
+  return (
+    <div className="card">
+      <div className="card-head">
+        <span className="card-title">My profile</span>
+        <button className="btn-primary" style={{ marginLeft: 'auto', height: 30 }} disabled={!form.first_name.trim()} onClick={save}>
+          <Icon name="check" size={13}/>{saved ? 'Saved' : 'Save'}
+        </button>
+      </div>
+      <div className="card-body">
+        <div className="dl-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+          <div><label>First name</label><input className="input-text" style={{ width: '100%' }} value={form.first_name} onChange={set('first_name')}/></div>
+          <div><label>Last name</label><input className="input-text" style={{ width: '100%' }} value={form.last_name} onChange={set('last_name')}/></div>
+          <div><label>Email (sign-in)</label><div className="v" style={{ padding: '8px 0', color: 'var(--ink-600)' }}>{localUser?.email || '—'}</div></div>
+          <div><label>Role</label><div className="v" style={{ padding: '8px 0', color: 'var(--ink-600)' }}>{localUser?.is_clinic_owner ? 'Dentist · Clinic owner' : 'Staff'}</div></div>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--ink-400)', marginTop: 12 }}>
+          Your name appears in the sidebar, on visits, and on recorded payments.
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const SettingsPage = ({ onNavigate, badges }) => {
   const { clinic, localUser, session, signOut, refreshClinic } = useAuth();
   const { lang, setLang } = useLang();
@@ -72,7 +105,7 @@ export const SettingsPage = ({ onNavigate, badges }) => {
     setSaved(true);
   };
 
-  const nav = [['clinic', 'Clinic profile'], ['language', 'Language'], ['team', 'Team & roles'], ['data', 'Data & sync']];
+  const nav = [['clinic', 'Clinic profile'], ['profile', 'My profile'], ['language', 'Language'], ['team', 'Team & roles'], ['data', 'Data & sync']];
 
   return (
     <div className="app">
@@ -110,6 +143,8 @@ export const SettingsPage = ({ onNavigate, badges }) => {
                   </div>
                 </div>
               )}
+
+              {section === 'profile' && <ProfileSection key={localUser?.id}/>}
 
               {section === 'language' && (
                 <div className="card">

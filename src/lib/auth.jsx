@@ -146,11 +146,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const refreshClinic = async () => setClinic(await clinicRepo.current());
+  const refreshUser = async () => {
+    if (session?.user) setLocalUser(await userRepo.byAuthId(session.user.id));
+  };
 
   return (
     <AuthContext.Provider value={{
       loading, session, localUser, clinic, notice, setNotice,
-      signIn, signUp, signOut, addStaff, refreshClinic,
+      signIn, signUp, signOut, addStaff, refreshClinic, refreshUser,
     }}>
       {children}
     </AuthContext.Provider>
