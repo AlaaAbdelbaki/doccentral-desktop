@@ -6,7 +6,7 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "build": "esbuild src/index.jsx --bundle --outfile=dist/bundle.js --jsx=automatic",
+    "build": "esbuild src/index.jsx --bundle --outfile=dist/bundle.js --jsx=automatic --loader:.sql=text",
     "start": "npm run build && electron ."
   },
   "dependencies": {

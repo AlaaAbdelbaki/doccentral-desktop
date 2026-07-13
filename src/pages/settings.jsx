@@ -8,7 +8,8 @@ import { useAuth } from '../lib/auth.jsx';
 import { useLang } from '../lib/i18n.jsx';
 import { userRepo, clinicRepo } from '../lib/repos.js';
 import { seedDemoData } from '../lib/seed.js';
-import { syncNow, onSyncState } from '../lib/sync.js';
+import { syncNow, onSyncState, MIGRATION_SQL } from '../lib/sync.js';
+import { SUPABASE_URL } from '../lib/config.js';
 
 const AddStaffModal = ({ onClose }) => {
   const { addStaff } = useAuth();
@@ -82,6 +83,7 @@ export const SettingsPage = ({ onNavigate, badges, params }) => {
   const { lang, setLang } = useLang();
   const [section, setSection] = useState(params?.section || 'clinic');
   const [sync, setSync] = useState({ status: 'idle', pending: 0, errors: [] });
+  const [copied, setCopied] = useState(false);
   useEffect(() => onSyncState(setSync), []);
   const [team, setTeam] = useState([]);
   const [modal, setModal] = useState(null);
@@ -214,11 +216,32 @@ export const SettingsPage = ({ onNavigate, badges, params }) => {
                         {sync.pending > 0 && !sync.errors?.length && sync.status !== 'syncing' && (
                           <div className="warn-banner">{sync.pending} record(s) pending — {sync.error || 'will retry automatically'}.</div>
                         )}
-                        {sync.errors?.length > 0 && (
+                        {sync.errors?.length > 0 && !sync.needsSetup && (
                           <div className="auth-error" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                             <b>Sync failed for {sync.errors.length} table(s) — {sync.pending} record(s) kept locally:</b>
                             {[...new Set(sync.errors.map((e) => e.message))].slice(0, 3).map((m) => <div key={m}>· {m}</div>)}
                             {sync.errors.length > 3 && <div>· …and more (same cause for most tables)</div>}
+                          </div>
+                        )}
+                        {sync.needsSetup && (
+                          <div className="warn-banner">
+                            <b>Cloud tables not set up yet.</b>
+                            <div>
+                              The Supabase project has no tables to sync into. Tables can't be created
+                              through the app's API key — run the bundled migration once in the Supabase
+                              SQL editor, then sync resumes automatically (records are safe locally meanwhile).
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                              <button className="btn-ghost" onClick={async () => {
+                                await navigator.clipboard.writeText(MIGRATION_SQL);
+                                setCopied(true); setTimeout(() => setCopied(false), 3000);
+                              }}>{copied ? 'Copied ✓' : 'Copy migration SQL'}</button>
+                              <button className="btn-ghost" onClick={() => {
+                                const ref = new URL(SUPABASE_URL).hostname.split('.')[0];
+                                window.dc.app.openExternal(`https://supabase.com/dashboard/project/${ref}/sql/new`);
+                              }}>Open Supabase SQL editor</button>
+                              <button className="btn-ghost" onClick={() => syncNow(session?.dev ? null : session)}>Retry sync</button>
+                            </div>
                           </div>
                         )}
                       </div>

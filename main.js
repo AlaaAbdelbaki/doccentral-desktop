@@ -43,6 +43,10 @@ function registerIpc(win) {
 
   ipcMain.handle('files:open', (_e, storagePath) => shell.openPath(storagePath));
 
+  ipcMain.handle('app:openExternal', (_e, url) => {
+    if (/^https:\/\//.test(url)) shell.openExternal(url);
+  });
+
   ipcMain.handle('files:dataUrl', (_e, storagePath) => {
     try {
       const ext = path.extname(storagePath).toLowerCase();

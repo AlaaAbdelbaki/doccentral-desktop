@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('dc', {
   },
   app: {
     info: () => ipcRenderer.invoke('app:info'),
+    openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
   },
 });

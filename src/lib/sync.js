@@ -5,6 +5,11 @@
 // pending — the app is fully functional offline.
 import { all, run } from './dbx.js';
 import { supabase } from './supabase.js';
+import MIGRATION_SQL from '../../supabase/migrations/0001_init_doccentral.sql';
+
+export { MIGRATION_SQL };
+// PostgREST error when the remote schema hasn't been provisioned yet.
+const isMissingTable = (msg) => /schema cache|does not exist/i.test(msg || '');
 
 export const SYNC_TABLES = [
   'clinics', 'users', 'roles', 'user_roles', 'patients',
@@ -58,6 +63,7 @@ export async function syncNow(session) {
     lastSync: errors.length ? state.lastSync : new Date(),
     error: errors.length ? `${errors.length} table(s) failed to sync — records kept locally` : null,
     errors,
+    needsSetup: errors.some((e) => isMissingTable(e.message)),
   });
   return pushed;
 }
