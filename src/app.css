@@ -1,0 +1,130 @@
+/* DocCentral app-specific additions on top of the DentaCore design system */
+
+/* Modal */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(14,23,38,0.32);
+  backdrop-filter: blur(2px);
+  z-index: 60;
+  display: grid; place-items: center;
+  padding: 24px;
+}
+.modal {
+  background: var(--white);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-pop);
+  width: 520px;
+  max-width: 100%;
+  max-height: calc(100vh - 60px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.modal.wide { width: 760px; }
+.modal-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ink-150);
+}
+.modal-title {
+  font-family: var(--font-serif);
+  font-weight: 500; font-size: 19px;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+}
+.modal-body { padding: 18px 20px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.modal-foot {
+  padding: 14px 20px;
+  border-top: 1px solid var(--ink-150);
+  display: flex; gap: 8px; justify-content: flex-end;
+  background: var(--ink-50);
+}
+
+/* Form fields */
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label {
+  font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.03em; text-transform: uppercase;
+  color: var(--ink-500);
+}
+.field input, .field select, .field textarea {
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-sm);
+  padding: 8px 11px;
+  font-size: 13px;
+  color: var(--ink-900);
+  outline: none;
+  background: var(--white);
+  width: 100%;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue-400); }
+.field textarea { resize: vertical; min-height: 70px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.btn-danger {
+  height: 30px; padding: 0 10px;
+  border: 1px solid var(--coral-200);
+  border-radius: var(--r-sm);
+  background: var(--coral-50);
+  color: var(--coral-700);
+  font-weight: 600; font-size: 12.5px;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-danger:hover { background: var(--coral-500); color: white; border-color: var(--coral-500); }
+
+/* Auth screen */
+.auth-wrap {
+  height: 100vh;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(600px 300px at 20% 0%, var(--blue-50), transparent),
+    radial-gradient(500px 300px at 90% 100%, var(--mint-50), transparent),
+    var(--ink-50);
+}
+.auth-card {
+  width: 400px; max-width: calc(100vw - 40px);
+  background: var(--white);
+  border: 1px solid var(--ink-150);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-3);
+  padding: 30px 30px 26px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.auth-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.auth-title {
+  font-family: var(--font-serif);
+  font-weight: 500; font-size: 24px;
+  letter-spacing: -0.015em; color: var(--ink-900);
+}
+.auth-sub { font-size: 13px; color: var(--ink-500); margin-top: -8px; }
+.auth-error {
+  background: var(--coral-50); border: 1px solid var(--coral-200);
+  color: var(--coral-700); border-radius: var(--r-sm);
+  font-size: 12.5px; padding: 8px 12px;
+}
+.auth-notice {
+  background: var(--mint-50); border: 1px solid var(--mint-200);
+  color: var(--mint-700); border-radius: var(--r-sm);
+  font-size: 12.5px; padding: 8px 12px;
+}
+.auth-switch { font-size: 12.5px; color: var(--ink-500); text-align: center; }
+.auth-switch a { cursor: pointer; font-weight: 600; }
+.btn-block { width: 100%; justify-content: center; height: 38px; font-size: 13.5px; }
+
+/* Sync pill in topbar */
+.sync-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 600;
+  padding: 5px 10px; border-radius: 999px;
+  background: var(--ink-100); color: var(--ink-600);
+  white-space: nowrap;
+}
+.sync-pill .pdot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.sync-pill.ok { background: var(--mint-100); color: var(--mint-700); }
+.sync-pill.pending { background: var(--amber-100); color: var(--amber-700); }
+.sync-pill.off { background: var(--ink-100); color: var(--ink-500); }
+
+/* Attachment preview */
+.attach-preview { max-width: 100%; max-height: 55vh; border-radius: var(--r-sm); border: 1px solid var(--ink-150); }
+
+/* Clickable rows */
+.clickable { cursor: pointer; }

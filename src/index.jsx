@@ -1,4 +1,4 @@
 import { createRoot } from 'react-dom/client';
-import { PatientsPage } from './patients-page.jsx';
+import { App } from './app.jsx';
 
-createRoot(document.getElementById('root')).render(<PatientsPage/>);
+createRoot(document.getElementById('root')).render(<App/>);
