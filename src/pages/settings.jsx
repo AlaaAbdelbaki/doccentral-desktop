@@ -8,7 +8,7 @@ import { useAuth } from '../lib/auth.jsx';
 import { useLang } from '../lib/i18n.jsx';
 import { userRepo, clinicRepo } from '../lib/repos.js';
 import { seedDemoData } from '../lib/seed.js';
-import { syncNow } from '../lib/sync.js';
+import { syncNow, onSyncState } from '../lib/sync.js';
 
 const AddStaffModal = ({ onClose }) => {
   const { addStaff } = useAuth();
@@ -77,10 +77,12 @@ const ProfileSection = () => {
   );
 };
 
-export const SettingsPage = ({ onNavigate, badges }) => {
+export const SettingsPage = ({ onNavigate, badges, params }) => {
   const { clinic, localUser, session, signOut, refreshClinic } = useAuth();
   const { lang, setLang } = useLang();
-  const [section, setSection] = useState('clinic');
+  const [section, setSection] = useState(params?.section || 'clinic');
+  const [sync, setSync] = useState({ status: 'idle', pending: 0, errors: [] });
+  useEffect(() => onSyncState(setSync), []);
   const [team, setTeam] = useState([]);
   const [modal, setModal] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -198,7 +200,27 @@ export const SettingsPage = ({ onNavigate, badges }) => {
                       <div className="setting-row">
                         <div><div className="sr-label">Supabase account</div>
                           <div className="sr-desc">{session?.user?.email || 'Not signed in'}</div></div>
-                        <div className="sr-control"><button className="btn-ghost" onClick={() => syncNow(session)}>Sync now</button></div>
+                        <div className="sr-control">
+                          <button className="btn-ghost" disabled={sync.status === 'syncing'}
+                                  onClick={() => syncNow(session?.dev ? null : session)}>
+                            {sync.status === 'syncing' ? 'Syncing…' : 'Sync now'}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="setting-row" style={{ display: 'block' }}>
+                        {sync.status === 'synced' && !sync.pending && (
+                          <div className="auth-notice">All local changes synced{sync.lastSync ? ` · ${sync.lastSync.toLocaleTimeString()}` : ''}.</div>
+                        )}
+                        {sync.pending > 0 && !sync.errors?.length && sync.status !== 'syncing' && (
+                          <div className="warn-banner">{sync.pending} record(s) pending — {sync.error || 'will retry automatically'}.</div>
+                        )}
+                        {sync.errors?.length > 0 && (
+                          <div className="auth-error" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <b>Sync failed for {sync.errors.length} table(s) — {sync.pending} record(s) kept locally:</b>
+                            {[...new Set(sync.errors.map((e) => e.message))].slice(0, 3).map((m) => <div key={m}>· {m}</div>)}
+                            {sync.errors.length > 3 && <div>· …and more (same cause for most tables)</div>}
+                          </div>
+                        )}
                       </div>
                       <div className="setting-row">
                         <div><div className="sr-label">Offline-first storage</div>

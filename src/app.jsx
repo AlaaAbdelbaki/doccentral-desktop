@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
 import { LangProvider } from './lib/i18n.jsx';
 import { startAutoSync } from './lib/sync.js';
+import { onNavigateRequest } from './lib/nav.js';
 import { onDataChanged } from './lib/dbx.js';
 import { inventoryRepo, patientRepo } from './lib/repos.js';
 import { SignInPage } from './pages/signin.jsx';
@@ -27,7 +28,12 @@ const Main = () => {
   const [badges, setBadges] = useState({});
 
   useEffect(() => {
-    window.dc.app.info().then((i) => { if (i.initialPage) setRoute({ page: i.initialPage, params: null }); });
+    window.dc.app.info().then((i) => {
+      if (!i.initialPage) return;
+      const [page, section] = i.initialPage.split(':');
+      setRoute({ page, params: section ? { section } : null });
+    });
+    return onNavigateRequest((page, params) => setRoute({ page, params }));
   }, []);
 
   useEffect(() => {

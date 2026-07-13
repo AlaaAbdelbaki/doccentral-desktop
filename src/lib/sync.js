@@ -16,7 +16,7 @@ export const SYNC_TABLES = [
 ];
 
 const listeners = new Set();
-let state = { status: 'idle', pending: 0, lastSync: null, error: null };
+let state = { status: 'idle', pending: 0, lastSync: null, error: null, errors: [] };
 
 export const onSyncState = (fn) => { listeners.add(fn); fn(state); return () => listeners.delete(fn); };
 const setState = (patch) => { state = { ...state, ...patch }; listeners.forEach((fn) => fn(state)); };
@@ -31,10 +31,13 @@ export async function pendingCount() {
 }
 
 export async function syncNow(session) {
-  if (!session) { setState({ status: 'offline', pending: await pendingCount() }); return; }
+  if (!session) {
+    setState({ status: 'offline', pending: await pendingCount(), errors: [], error: 'Not signed in — records kept locally' });
+    return 0;
+  }
   setState({ status: 'syncing', error: null });
   let pushed = 0;
-  let failed = false;
+  const errors = [];
   for (const table of SYNC_TABLES) {
     const rows = await all(`SELECT * FROM ${table} WHERE sync_status='pending'`);
     if (!rows.length) continue;
@@ -44,15 +47,17 @@ export async function syncNow(session) {
       for (const r of rows) await run(`UPDATE ${table} SET sync_status='synced' WHERE id=?`, [r.id]);
       pushed += rows.length;
     } catch (e) {
-      failed = true; // remote table missing / offline — rows stay pending
+      // Remote table missing / offline / RLS — rows stay pending locally.
+      errors.push({ table, count: rows.length, message: (e && e.message) || String(e) });
     }
   }
   const pending = await pendingCount();
   setState({
-    status: failed ? (pending ? 'pending' : 'idle') : 'synced',
+    status: errors.length ? (pending ? 'pending' : 'idle') : 'synced',
     pending,
-    lastSync: failed ? state.lastSync : new Date(),
-    error: failed ? 'Some records not synced (kept locally)' : null,
+    lastSync: errors.length ? state.lastSync : new Date(),
+    error: errors.length ? `${errors.length} table(s) failed to sync — records kept locally` : null,
+    errors,
   });
   return pushed;
 }

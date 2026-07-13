@@ -4,6 +4,7 @@ import { Icon } from './icons.jsx';
 import { useLang } from './lib/i18n.jsx';
 import { useAuth } from './lib/auth.jsx';
 import { onSyncState } from './lib/sync.js';
+import { requestNavigate } from './lib/nav.js';
 import { initialsOf } from './components.jsx';
 
 export const NAV = {
@@ -59,11 +60,17 @@ export const Sidebar = ({ active, onNavigate, badges = {} }) => {
 export const SyncPill = () => {
   const [s, setS] = useState({ status: 'idle', pending: 0 });
   useEffect(() => onSyncState(setS), []);
-  if (s.status === 'syncing') return <span className="sync-pill"><span className="pdot"/>Syncing…</span>;
-  if (s.status === 'synced' && !s.pending) return <span className="sync-pill ok"><span className="pdot"/>Synced</span>;
-  if (s.pending > 0) return <span className="sync-pill pending" title={s.error || ''}><span className="pdot"/>{s.pending} pending</span>;
-  if (s.status === 'offline') return <span className="sync-pill off"><span className="pdot"/>Offline</span>;
-  return <span className="sync-pill off"><span className="pdot"/>Local</span>;
+  const open = () => requestNavigate('settings', { section: 'data' });
+  const pill = (cls, label) => (
+    <span className={`sync-pill ${cls} clickable`} title={s.error || 'Open sync settings'} onClick={open}>
+      <span className="pdot"/>{label}
+    </span>
+  );
+  if (s.status === 'syncing') return pill('', 'Syncing…');
+  if (s.status === 'synced' && !s.pending) return pill('ok', 'Synced');
+  if (s.pending > 0) return pill('pending', `${s.pending} pending`);
+  if (s.status === 'offline') return pill('off', 'Offline');
+  return pill('off', 'Local');
 };
 
 export const Topbar = ({ title, subtitle, greeting, actions, onSearch, searchPlaceholder }) => {
