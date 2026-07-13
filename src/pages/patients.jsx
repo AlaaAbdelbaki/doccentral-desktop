@@ -46,20 +46,49 @@ const PatientFormModal = ({ patient, onClose }) => {
   );
 };
 
+const PlanFormModal = ({ patient, presetTooth, onClose, onSaved }) => {
+  const [form, setForm] = useState({ name: '', tooth: presetTooth || '', price: '', date: '' });
+  const [error, setError] = useState(null);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const save = async () => {
+    try {
+      await planRepo.create({
+        patient_id: patient.id, procedure_name: form.name.trim(), tooth_number: form.tooth.trim() || '—',
+        estimated_unit_price: Number(form.price) || 0,
+        target_date: form.date ? new Date(form.date).toISOString() : null,
+      });
+      if (onSaved) onSaved();
+      onClose();
+    } catch (e) {
+      setError(e.message || String(e));
+    }
+  };
+  return (
+    <Modal title={`Add planned treatment — ${fullName(patient)}`} onClose={onClose}
+      footer={<>
+        <button className="btn-ghost" onClick={onClose}>Cancel</button>
+        <button className="btn-primary" disabled={!form.name.trim()} onClick={save}><Icon name="check" size={13}/>Add to plan</button>
+      </>}>
+      {error && <div className="auth-error">{error}</div>}
+      <Field label="Procedure (required)">
+        <input autoFocus value={form.name} onChange={set('name')} placeholder="e.g. Root canal — session 1 of 3"/>
+      </Field>
+      <div className="form-row">
+        <Field label="Tooth"><input value={form.tooth} onChange={set('tooth')} placeholder="e.g. 30 or FM"/></Field>
+        <Field label="Estimated fee"><input type="number" min="0" value={form.price} onChange={set('price')}/></Field>
+      </div>
+      <Field label="Target date (optional — leave empty for next available)">
+        <input type="date" value={form.date} onChange={set('date')}/>
+      </Field>
+    </Modal>
+  );
+};
+
 const PlanTab = ({ patient, currency }) => {
   const [plan, setPlan] = useState([]);
   const [adding, setAdding] = useState(false);
-  const [row, setRow] = useState({ name: '', tooth: '', price: '', date: '' });
   const load = () => planRepo.forPatient(patient.id).then(setPlan);
   useEffect(() => { load(); }, [patient.id]);
-
-  const add = async () => {
-    await planRepo.create({
-      patient_id: patient.id, procedure_name: row.name, tooth_number: row.tooth || '—',
-      estimated_unit_price: Number(row.price) || 0, target_date: row.date ? new Date(row.date).toISOString() : null,
-    });
-    setRow({ name: '', tooth: '', price: '', date: '' }); setAdding(false); load();
-  };
 
   const remaining = plan.filter((p) => !['done', 'cancelled'].includes(p.status))
     .reduce((s, p) => s + p.estimated_unit_price, 0);
@@ -92,15 +121,7 @@ const PlanTab = ({ patient, currency }) => {
           {!plan.length && <tr><td colSpan={7}><EmptyState icon="tooth" title="No treatment plan yet" hint="Plan multi-session treatments and schedule them as appointments."/></td></tr>}
         </tbody>
       </table>
-      {adding && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 100px 140px auto', gap: 8, padding: 12, borderTop: '1px solid var(--ink-150)' }}>
-          <input className="input-text" placeholder="Procedure" value={row.name} onChange={(e) => setRow({ ...row, name: e.target.value })}/>
-          <input className="input-text" placeholder="Tooth" value={row.tooth} onChange={(e) => setRow({ ...row, tooth: e.target.value })}/>
-          <input className="input-text" placeholder="Est. price" type="number" value={row.price} onChange={(e) => setRow({ ...row, price: e.target.value })}/>
-          <input className="input-text" type="date" value={row.date} onChange={(e) => setRow({ ...row, date: e.target.value })}/>
-          <button className="btn-ghost" disabled={!row.name} onClick={add}><Icon name="check" size={12}/>Add</button>
-        </div>
-      )}
+      {adding && <PlanFormModal patient={patient} onClose={() => setAdding(false)} onSaved={load}/>}
     </div>
   );
 };
@@ -131,7 +152,9 @@ const VisitsTab = ({ patient, currency, onOpenVisit }) => {
 const ChartTab = ({ patient }) => {
   const [sel, setSel] = useState(null);
   const [states, setStates] = useState({});
-  useEffect(() => {
+  const [planning, setPlanning] = useState(false);
+  useEffect(() => { loadStates(); }, [patient.id]);
+  const loadStates = () => {
     (async () => {
       const visits = await visitRepo.forPatient(patient.id);
       const map = {};
@@ -150,7 +173,7 @@ const ChartTab = ({ patient }) => {
       }
       setStates(map);
     })();
-  }, [patient.id]);
+  };
 
   const label = (s) => s === 'watch' ? 'Planned treatment' : s === 'filling' ? 'Treated (restoration)'
     : s === 'crown' ? 'Crown' : s === 'missing' ? 'Missing / extracted' : 'Sound';
@@ -183,12 +206,21 @@ const ChartTab = ({ patient }) => {
         <div className="card-head"><span className="card-title">Tooth {sel ? `#${sel}` : ''}</span></div>
         <div className="card-body">
           {sel
-            ? <div className="dl-grid" style={{ gridTemplateColumns: '1fr' }}>
-                <div><label>Condition</label><div className="v">{label(states[sel])}</div></div>
-              </div>
+            ? <>
+                <div className="dl-grid" style={{ gridTemplateColumns: '1fr' }}>
+                  <div><label>Condition</label><div className="v">{label(states[sel])}</div></div>
+                </div>
+                <button className="btn-ghost" style={{ marginTop: 14 }} onClick={() => setPlanning(true)}>
+                  <Icon name="plus" size={12}/>Add to plan
+                </button>
+              </>
             : <div className="empty-pad">Select a tooth</div>}
         </div>
       </div>
+      {planning && (
+        <PlanFormModal patient={patient} presetTooth={String(sel)}
+          onClose={() => setPlanning(false)} onSaved={loadStates}/>
+      )}
     </div>
   );
 };

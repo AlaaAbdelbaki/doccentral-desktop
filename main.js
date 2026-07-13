@@ -83,11 +83,28 @@ const createWindow = () => {
   registerIpc(win);
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
 
-  // Headless self-check: DOC_SCREENSHOT=<path> captures the page and quits.
+  // Headless self-check hooks:
+  //   DOC_CONSOLE_LOG=<file>  append renderer console messages
+  //   DOC_SCRIPT=<file.js>    run a DOM script after load (drives the UI)
+  //   DOC_SCREENSHOT=<file>   capture the page and quit
+  if (process.env.DOC_CONSOLE_LOG) {
+    win.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+      fs.appendFileSync(process.env.DOC_CONSOLE_LOG, `[${level}] ${message} (${sourceId}:${line})\n`);
+    });
+  }
   const shot = process.env.DOC_SCREENSHOT;
   if (shot) {
     win.webContents.once('did-finish-load', async () => {
       await new Promise((r) => setTimeout(r, Number(process.env.DOC_SCREENSHOT_DELAY || 2500)));
+      if (process.env.DOC_SCRIPT) {
+        let result;
+        try {
+          result = await win.webContents.executeJavaScript(fs.readFileSync(process.env.DOC_SCRIPT, 'utf8'));
+        } catch (err) {
+          result = 'SCRIPT ERROR: ' + (err && err.message ? err.message : err);
+        }
+        fs.writeFileSync(`${shot}.result.txt`, String(result));
+      }
       const img = await win.webContents.capturePage();
       fs.writeFileSync(shot, img.toPNG());
       db.save();
