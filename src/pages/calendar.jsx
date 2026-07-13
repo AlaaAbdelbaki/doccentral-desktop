@@ -37,6 +37,19 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
   }, [patients, providers]);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  // Live slot-conflict check for the selected provider and time window.
+  const [conflicts, setConflicts] = useState([]);
+  const validRange = form.start && form.end && form.start < form.end;
+  useEffect(() => {
+    if (!form.assigned_user_id || !form.date || !validRange) { setConflicts([]); return; }
+    appointmentRepo.overlapping(
+      form.assigned_user_id,
+      combineDateTime(form.date, form.start),
+      combineDateTime(form.date, form.end),
+      appt?.id,
+    ).then(setConflicts);
+  }, [form.assigned_user_id, form.date, form.start, form.end]);
+
   const save = async () => {
     const fields = {
       patient_id: form.patient_id, assigned_user_id: form.assigned_user_id,
@@ -53,10 +66,25 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
     <Modal title={appt ? 'Edit appointment' : 'New appointment'} onClose={onClose}
       footer={<>
         <button className="btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn-primary" onClick={save} disabled={!form.patient_id || !form.assigned_user_id}><Icon name="check" size={13}/>Save</button>
+        <button className={conflicts.length ? 'btn-danger' : 'btn-primary'} onClick={save}
+                disabled={!form.patient_id || !form.assigned_user_id || !validRange}>
+          <Icon name={conflicts.length ? 'alert-tri' : 'check'} size={13}/>
+          {conflicts.length ? 'Book anyway' : 'Save'}
+        </button>
       </>}>
       {!patients.length && (
         <div className="auth-error">No patients yet — add one from the Patients page first.</div>
+      )}
+      {!validRange && form.start && form.end && (
+        <div className="auth-error">End time must be after the start time.</div>
+      )}
+      {conflicts.length > 0 && (
+        <div className="warn-banner">
+          <b>This slot is already booked:</b>
+          {conflicts.map((c) => (
+            <div key={c.id}>· {fmtTime(c.start_time)}–{fmtTime(c.end_time)} — {c.first_name} {c.last_name}{c.reason ? ` (${c.reason})` : ''}</div>
+          ))}
+        </div>
       )}
       <Field label="Patient">
         <select value={form.patient_id} onChange={set('patient_id')}>
@@ -88,6 +116,15 @@ const CancelModal = ({ appt, onClose }) => {
   const [reDate, setReDate] = useState(toDateInput(addDays(new Date(), 1).toISOString()));
   const [reStart, setReStart] = useState(toTimeInput(appt.start_time));
   const [reEnd, setReEnd] = useState(toTimeInput(appt.end_time));
+  const [conflicts, setConflicts] = useState([]);
+  useEffect(() => {
+    if (reason !== 'rescheduled' || !reStart || !reEnd || reStart >= reEnd) { setConflicts([]); return; }
+    appointmentRepo.overlapping(
+      appt.assigned_user_id,
+      combineDateTime(reDate, reStart), combineDateTime(reDate, reEnd),
+      appt.id,
+    ).then(setConflicts);
+  }, [reason, reDate, reStart, reEnd]);
 
   const confirm = async () => {
     const replacement = reason === 'rescheduled' ? {
@@ -120,6 +157,14 @@ const CancelModal = ({ appt, onClose }) => {
             <Field label="Start"><input type="time" value={reStart} onChange={(e) => setReStart(e.target.value)}/></Field>
             <Field label="End"><input type="time" value={reEnd} onChange={(e) => setReEnd(e.target.value)}/></Field>
           </div>
+        </div>
+      )}
+      {conflicts.length > 0 && (
+        <div className="warn-banner">
+          <b>The new slot is already booked:</b>
+          {conflicts.map((c) => (
+            <div key={c.id}>· {fmtTime(c.start_time)}–{fmtTime(c.end_time)} — {c.first_name} {c.last_name}{c.reason ? ` (${c.reason})` : ''}</div>
+          ))}
         </div>
       )}
       <Field label="Notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional context…"/></Field>

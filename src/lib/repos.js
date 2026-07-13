@@ -80,6 +80,16 @@ export const appointmentRepo = {
      ORDER BY a.start_time`, [startIso, endIso]),
   forPatient: (patientId) => all(
     `SELECT * FROM appointments WHERE patient_id=? AND ${LIVE} ORDER BY start_time DESC`, [patientId]),
+  // Appointments occupying [startIso, endIso) for a provider (slot conflicts).
+  overlapping: (assignedUserId, startIso, endIso, excludeId) => all(
+    `SELECT a.*, p.first_name, p.last_name FROM appointments a
+     JOIN patients p ON p.id=a.patient_id
+     WHERE a.assigned_user_id=? AND a.${LIVE}
+       AND a.status IN ('scheduled','checked_in')
+       AND a.start_time < ? AND a.end_time > ?
+       AND a.id != ?
+     ORDER BY a.start_time`,
+    [assignedUserId, endIso, startIso, excludeId || '']),
   create: async (fields) => {
     const r = await insert('appointments', { status: 'scheduled', ...fields });
     emitDataChanged(); return r;
