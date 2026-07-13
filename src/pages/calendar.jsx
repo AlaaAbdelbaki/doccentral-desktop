@@ -14,19 +14,27 @@ const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); r
 const startOfWeek = (d) => { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); x.setHours(0, 0, 0, 0); return x; };
 
 const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
-  const [form, setForm] = useState({
-    patient_id: appt?.patient_id || defaults?.patientId || patients[0]?.id || '',
-    assigned_user_id: appt?.assigned_user_id || providers[0]?.id || '',
-    date: toDateInput(appt?.start_time || defaults?.date),
-    start: toTimeInput(appt?.start_time || null),
-    end: appt ? toTimeInput(appt.end_time) : null,
-    reason: appt?.reason || '',
-    notes: appt?.notes || '',
+  const [form, setForm] = useState(() => {
+    const end = new Date(); end.setHours(end.getHours() + 1);
+    return {
+      patient_id: appt?.patient_id || defaults?.patientId || '',
+      assigned_user_id: appt?.assigned_user_id || '',
+      date: toDateInput(appt?.start_time || defaults?.date),
+      start: toTimeInput(appt?.start_time || null),
+      end: appt ? toTimeInput(appt.end_time) : toTimeInput(end.toISOString()),
+      reason: appt?.reason || '',
+      notes: appt?.notes || '',
+    };
   });
-  if (form.end === null) {
-    const d = new Date(); d.setHours(d.getHours() + 1);
-    form.end = toTimeInput(d.toISOString());
-  }
+  // Patients/providers may finish loading after the modal mounts (e.g. Home →
+  // "New appointment") — backfill the defaults once the lists arrive.
+  useEffect(() => {
+    setForm((f) => ({
+      ...f,
+      patient_id: f.patient_id || patients[0]?.id || '',
+      assigned_user_id: f.assigned_user_id || providers[0]?.id || '',
+    }));
+  }, [patients, providers]);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const save = async () => {
@@ -45,8 +53,11 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
     <Modal title={appt ? 'Edit appointment' : 'New appointment'} onClose={onClose}
       footer={<>
         <button className="btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn-primary" onClick={save} disabled={!form.patient_id}><Icon name="check" size={13}/>Save</button>
+        <button className="btn-primary" onClick={save} disabled={!form.patient_id || !form.assigned_user_id}><Icon name="check" size={13}/>Save</button>
       </>}>
+      {!patients.length && (
+        <div className="auth-error">No patients yet — add one from the Patients page first.</div>
+      )}
       <Field label="Patient">
         <select value={form.patient_id} onChange={set('patient_id')}>
           {patients.map((p) => <option key={p.id} value={p.id}>{fullName(p)}</option>)}

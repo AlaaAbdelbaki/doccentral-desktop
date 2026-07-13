@@ -60,10 +60,13 @@ export const DayTimeline = ({ appointments, providers, onPick, showNowLine = tru
         <div className="sch-time-col">
           {hours.map((h) => <div key={h} className="sch-hour">{fmtH(h)}</div>)}
         </div>
-        {cols.map((u) => (
+        {cols.map((u, ci) => (
           <div key={u.id} className="sch-chair-col" style={{ height: hours.length * HOUR_PX }}>
             {appointments
-              .filter((a) => (u.id === '_' ? true : a.assigned_user_id === u.id))
+              // Unknown/empty provider ids fall back to the first column so an
+              // appointment can never be silently invisible in day view.
+              .filter((a) => (u.id === '_' ? true
+                : a.assigned_user_id === u.id || (ci === 0 && !cols.some((c) => c.id === a.assigned_user_id))))
               .map((a) => {
                 const start = hourOf(a.start_time);
                 const end = hourOf(a.end_time);
