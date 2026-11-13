@@ -68,6 +68,23 @@ function registerIpc(win) {
   }));
 }
 
+// Tell staff when the database had to be restored, so they re-enter anything
+// recorded since the backup (or know that the data was lost).
+function warnIfRecovered(win) {
+  const r = db.lastRecovery();
+  if (!r || process.env.DOC_SCREENSHOT) return;
+  const detail = r.kind === 'restored'
+    ? `The local database was damaged and has been restored from the backup "${r.backup}". `
+      + 'Anything recorded after that backup was taken may be missing and should be re-entered.'
+    : 'The local database was damaged and no usable backup was found, so an empty database was created.';
+  dialog.showMessageBox(win, {
+    type: 'warning',
+    title: 'DocCentral — database recovered',
+    message: r.kind === 'restored' ? 'Your data was restored from a backup' : 'Your data could not be recovered',
+    detail: `${detail}\n\nThe damaged file was kept at:\n${r.kept}`,
+  });
+}
+
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1440,
@@ -86,14 +103,16 @@ const createWindow = () => {
   win.setMenuBarVisibility(false);
   registerIpc(win);
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  warnIfRecovered(win);
 
   // Headless self-check hooks:
   //   DOC_CONSOLE_LOG=<file>  append renderer console messages
   //   DOC_SCRIPT=<file.js>    run a DOM script after load (drives the UI)
   //   DOC_SCREENSHOT=<file>   capture the page and quit
   if (process.env.DOC_CONSOLE_LOG) {
-    win.webContents.on('console-message', (_e, level, message, line, sourceId) => {
-      fs.appendFileSync(process.env.DOC_CONSOLE_LOG, `[${level}] ${message} (${sourceId}:${line})\n`);
+    // Electron 35+ passes a single event object (positional args were removed).
+    win.webContents.on('console-message', (e) => {
+      fs.appendFileSync(process.env.DOC_CONSOLE_LOG, `[${e.level}] ${e.message} (${e.sourceId}:${e.lineNumber})\n`);
     });
   }
   const shot = process.env.DOC_SCREENSHOT;
