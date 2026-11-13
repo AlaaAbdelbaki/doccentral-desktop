@@ -16,6 +16,12 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
   const [adj, setAdj] = useState(null); // {type, description, amount}
   const [pay, setPay] = useState(null); // {amount, method, notes}
   const [voidReason, setVoidReason] = useState(null);
+  const [error, setError] = useState(null);
+  // Run a repository action; surface validation errors inside the sub-modal.
+  const attempt = async (fn) => {
+    setError(null);
+    try { await fn(); return true; } catch (e) { setError(e.message || String(e)); return false; }
+  };
 
   const load = async () => {
     setInvoice(await invoiceRepo.byId(invoiceId));
@@ -30,14 +36,16 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
   const isDraft = invoice.status === 'draft';
   const isVoid = invoice.status === 'void';
   const payable = ['unpaid', 'partially_paid'].includes(invoice.status);
+  const payTooBig = pay && Number(pay.amount) > due + 0.001;
+  const adjTooBig = adj && adj.type === 'discount' && Number(adj.amount) > invoice.total_amount + 0.001;
 
   return (
     <Modal wide title={<span>Invoice <span style={{ marginLeft: 8 }}><StatusPill status={invoice.status}/></span></span>} onClose={onClose}
       footer={<>
-        {isDraft && <button className="btn-ghost" onClick={() => setAdj({ type: 'discount', description: '', amount: '' })}>Add discount</button>}
-        {isDraft && <button className="btn-ghost" onClick={() => setAdj({ type: 'surcharge', description: '', amount: '' })}>Add surcharge</button>}
+        {isDraft && <button className="btn-ghost" onClick={() => { setError(null); setAdj({ type: 'discount', description: '', amount: '' }); }}>Add discount</button>}
+        {isDraft && <button className="btn-ghost" onClick={() => { setError(null); setAdj({ type: 'surcharge', description: '', amount: '' }); }}>Add surcharge</button>}
         {isDraft && <button className="btn-primary" onClick={async () => { await invoiceRepo.finalize(invoice.id); load(); }}><Icon name="check" size={13}/>Finalize</button>}
-        {payable && <button className="btn-primary" onClick={() => setPay({ amount: due.toFixed(2), method: 'cash', notes: '' })}><Icon name="dollar" size={13}/>Record payment</button>}
+        {payable && <button className="btn-primary" onClick={() => { setError(null); setPay({ amount: due.toFixed(2), method: 'cash', notes: '' }); }}><Icon name="dollar" size={13}/>Record payment</button>}
         {!isVoid && invoice.status !== 'paid' && <button className="btn-danger" onClick={() => setVoidReason('')}>Void</button>}
         <button className="btn-ghost" onClick={onClose}>Close</button>
       </>}>
@@ -94,11 +102,13 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
         <Modal title={adj.type === 'discount' ? 'Add discount' : 'Add surcharge'} onClose={() => setAdj(null)}
           footer={<>
             <button className="btn-ghost" onClick={() => setAdj(null)}>Cancel</button>
-            <button className="btn-primary" disabled={!adj.amount} onClick={async () => {
-              await invoiceRepo.addAdjustment(invoice.id, adj.type, adj.description || adj.type, Number(adj.amount));
-              setAdj(null); load();
+            <button className="btn-primary" disabled={!(Number(adj.amount) > 0) || adjTooBig} onClick={async () => {
+              const ok = await attempt(() => invoiceRepo.addAdjustment(invoice.id, adj.type, adj.description || adj.type, Number(adj.amount)));
+              if (ok) { setAdj(null); load(); }
             }}><Icon name="check" size={13}/>Add</button>
           </>}>
+          {adjTooBig && <div className="auth-error">A discount cannot exceed the invoice total ({money(invoice.total_amount, currency)}).</div>}
+          {error && <div className="auth-error">{error}</div>}
           <Field label="Description"><input value={adj.description} onChange={(e) => setAdj({ ...adj, description: e.target.value })} placeholder={adj.type === 'discount' ? 'e.g. Loyalty discount' : 'e.g. After-hours surcharge'}/></Field>
           <Field label={`Amount (${currency})`}><input type="number" min="0" value={adj.amount} onChange={(e) => setAdj({ ...adj, amount: e.target.value })}/></Field>
         </Modal>
@@ -108,11 +118,13 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
         <Modal title="Record payment" onClose={() => setPay(null)}
           footer={<>
             <button className="btn-ghost" onClick={() => setPay(null)}>Cancel</button>
-            <button className="btn-primary" disabled={!Number(pay.amount)} onClick={async () => {
-              await invoiceRepo.recordPayment(invoice.id, Number(pay.amount), pay.method, pay.notes, localUser.id);
-              setPay(null); load();
+            <button className="btn-primary" disabled={!(Number(pay.amount) > 0) || payTooBig} onClick={async () => {
+              const ok = await attempt(() => invoiceRepo.recordPayment(invoice.id, Number(pay.amount), pay.method, pay.notes, localUser.id));
+              if (ok) { setPay(null); load(); }
             }}><Icon name="check" size={13}/>Record</button>
           </>}>
+          {payTooBig && <div className="auth-error">Amount exceeds what is due ({money(Math.max(due, 0), currency)}).</div>}
+          {error && <div className="auth-error">{error}</div>}
           <div className="form-row">
             <Field label={`Amount (${currency})`}><input type="number" min="0" step="0.5" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })}/></Field>
             <Field label="Method">

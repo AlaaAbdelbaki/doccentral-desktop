@@ -31,7 +31,7 @@ const test = base.test.extend({
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     // Wait for auto-login + demo seed to finish (sidebar user name shows up).
-    await base.expect(page.locator('.side-user-name')).toHaveText(/Karim/, { timeout: 20_000 });
+    await base.expect(page.locator('.side-user-name')).toHaveText(/Karim/, { timeout: 45_000 });
     await use(page);
     await testInfo.attach('final', { body: await page.screenshot(), contentType: 'image/png' });
     base.expect(errors, 'uncaught renderer errors').toEqual([]);

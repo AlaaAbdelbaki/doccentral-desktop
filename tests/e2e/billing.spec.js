@@ -1,6 +1,5 @@
 // Visit → auto draft invoice → finalize → partial / full payment, plus
-// regression tests for known billing bugs (marked test.fail until fixed:
-// they PASS while the bug exists and will flag once it's fixed).
+// regression tests for previously fixed billing bugs.
 const { test, expect, snap, nav, modal, sql } = require('./fixtures');
 
 // Check Amira in from today's calendar, start treatment, add one procedure.
@@ -67,37 +66,48 @@ test('void an invoice requires a reason and is audited', async ({ page }) => {
   expect(audit.map((a) => a.reason)).toContain('Billing error');
 });
 
-test('KNOWN BUG: re-completing an unlocked visit creates a duplicate invoice', async ({ page }) => {
-  test.fail(true, 'visitRepo.complete always inserts a new invoice (src/lib/repos.js)');
+test('regression: re-completing an unlocked visit reuses its draft invoice', async ({ page }) => {
   await treatAmira(page);
   await modal(page).getByRole('button', { name: 'Complete visit' }).click();
   await modal(page).getByRole('button', { name: 'Unlock visit' }).click();
+  // Add a second procedure while unlocked; the draft must pick it up.
+  await modal(page).getByPlaceholder('Procedure (free text)').fill('Temporary filling');
+  await modal(page).getByPlaceholder('Price').fill('30');
+  await modal(page).getByRole('button', { name: 'Add' }).click();
   await modal(page).getByRole('button', { name: 'Complete visit' }).click();
   await snap(page, 'visit-recompleted');
-  const rows = await sql(page, `SELECT COUNT(*) n FROM invoices i JOIN patients p ON p.id=i.patient_id
+  const rows = await sql(page, `SELECT i.id, i.total_amount t FROM invoices i JOIN patients p ON p.id=i.patient_id
     WHERE p.first_name='Amira' AND i.deleted_at IS NULL`);
-  expect(rows[0].n, 'invoices for one visit').toBe(1);
+  expect(rows, 'invoices for one visit').toHaveLength(1);
+  expect(rows[0].t).toBe(180);
+  const items = await sql(page, `SELECT COUNT(*) n FROM invoice_items WHERE invoice_id=? AND deleted_at IS NULL`, [rows[0].id]);
+  expect(items[0].n).toBe(2);
 });
 
-test('KNOWN BUG: payment larger than the amount due is accepted', async ({ page }) => {
-  test.fail(true, 'no overpayment validation in InvoiceModal / invoiceRepo.recordPayment');
+test('regression: a payment larger than the amount due is blocked', async ({ page }) => {
   await openInvoiceFor(page, 'Mohamed Trabelsi'); // total 120, paid 50
-  await pay(page, 500);
-  await snap(page, 'overpaid-invoice');
+  await modal(page).getByRole('button', { name: 'Record payment' }).click();
+  await modal(page).locator('input[type=number]').fill('500');
+  await expect(modal(page)).toContainText('Amount exceeds what is due');
+  await expect(modal(page).getByRole('button', { name: 'Record' })).toBeDisabled();
+  await snap(page, 'overpayment-blocked');
+  await modal(page).locator('input[type=number]').fill('70');
+  await modal(page).getByRole('button', { name: 'Record' }).click();
+  await expect(modal(page).locator('.modal-title .pill')).toContainText('Paid');
   const [r] = await sql(page, `SELECT SUM(amount) paid FROM payments WHERE deleted_at IS NULL`);
-  expect(r.paid, 'total paid must not exceed invoice total').toBeLessThanOrEqual(120);
+  expect(r.paid).toBe(120);
 });
 
-test('KNOWN BUG: a discount larger than the total produces a negative invoice', async ({ page }) => {
-  test.fail(true, 'invoiceRepo.addAdjustment does not cap discounts');
+test('regression: a discount larger than the total is blocked', async ({ page }) => {
   await treatAmira(page, '50');
   await modal(page).getByRole('button', { name: 'Complete visit' }).click();
   await modal(page).getByRole('button', { name: 'Close' }).click();
   await openInvoiceFor(page, 'Amira Ben Salah');
   await modal(page).getByRole('button', { name: 'Add discount' }).click();
   await modal(page).locator('input[type=number]').fill('80');
-  await modal(page).getByRole('button', { name: 'Add' }).click();
-  await snap(page, 'negative-invoice');
+  await expect(modal(page)).toContainText('cannot exceed the invoice total');
+  await expect(modal(page).getByRole('button', { name: 'Add' })).toBeDisabled();
+  await snap(page, 'discount-blocked');
   const [r] = await sql(page, `SELECT i.total_amount t FROM invoices i JOIN patients p ON p.id=i.patient_id WHERE p.first_name='Amira'`);
   expect(r.t).toBeGreaterThanOrEqual(0);
 });

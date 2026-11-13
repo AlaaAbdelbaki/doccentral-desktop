@@ -35,8 +35,7 @@ test('day closeout: expected cash, confirm, reopen', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Confirm closeout' })).toBeVisible();
 });
 
-test('KNOWN BUG: closing a reopened day again still shows it as open', async ({ page }) => {
-  test.fail(true, 'closeoutRepo.forDate returns the first (reopened) row — no ORDER BY');
+test('regression: closing a reopened day again shows it as closed', async ({ page }) => {
   await nav(page, 'Day closeout');
   await page.getByPlaceholder('0').fill('50');
   await page.getByRole('button', { name: 'Confirm closeout' }).click();

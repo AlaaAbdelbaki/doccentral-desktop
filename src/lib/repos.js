@@ -150,10 +150,21 @@ export const visitRepo = {
     await update('appointments', visit.appointment_id, { status: 'completed' });
     const treatments = await visitRepo.treatments(visit.id);
     const total = treatments.reduce((s, t) => s + t.unit_price * t.quantity, 0);
-    const invoice = await insert('invoices', {
-      patient_id: visit.patient_id, visit_id: visit.id,
-      total_amount: total, status: 'draft', created_by_user_id: actorUserId,
-    });
+    // One invoice per visit. Re-completing an unlocked visit reuses it:
+    // a draft gets its treatment lines rebuilt (manual discounts/surcharges are
+    // kept); a finalized invoice is left untouched (payments may exist on it).
+    let invoice = await invoiceRepo.byVisit(visit.id);
+    if (invoice && invoice.status !== 'draft') { emitDataChanged(); return invoice; }
+    if (invoice) {
+      await run(`UPDATE invoice_items SET deleted_at=?, updated_at=?, sync_status='pending'
+                 WHERE invoice_id=? AND adjustment_type IS NULL AND deleted_at IS NULL`,
+                [nowIso(), nowIso(), invoice.id]);
+    } else {
+      invoice = await insert('invoices', {
+        patient_id: visit.patient_id, visit_id: visit.id,
+        total_amount: total, status: 'draft', created_by_user_id: actorUserId,
+      });
+    }
     for (const t of treatments) {
       await insert('invoice_items', {
         invoice_id: invoice.id, description: t.procedure_name, tooth_number: t.tooth_number,
@@ -161,8 +172,9 @@ export const visitRepo = {
         adjustment_type: null,
       });
     }
+    await invoiceRepo.recomputeTotal(invoice.id); // includes any kept adjustments
     emitDataChanged();
-    return invoice;
+    return invoiceRepo.byId(invoice.id);
   },
 };
 
@@ -214,7 +226,18 @@ export const invoiceRepo = {
     const t = await get(`SELECT COALESCE(SUM(total_price),0) AS s FROM invoice_items WHERE invoice_id=? AND ${LIVE}`, [invoiceId]);
     await update('invoices', invoiceId, { total_amount: t.s });
   },
+  amountDue: async (invoiceId) => {
+    const inv = await invoiceRepo.byId(invoiceId);
+    const paid = await get(`SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE invoice_id=? AND ${LIVE}`, [invoiceId]);
+    return Math.max(0, inv.total_amount - paid.s);
+  },
   addAdjustment: async (invoiceId, type, description, amount) => {
+    if (!(amount > 0)) throw new Error('Amount must be greater than zero.');
+    const inv = await invoiceRepo.byId(invoiceId);
+    if (inv.status !== 'draft') throw new Error('Only draft invoices can be adjusted.');
+    if (type === 'discount' && amount > inv.total_amount + 0.001) {
+      throw new Error(`Discount cannot exceed the invoice total (${inv.total_amount}).`);
+    }
     const signed = type === 'discount' ? -Math.abs(amount) : Math.abs(amount);
     await insert('invoice_items', {
       invoice_id: invoiceId, description, tooth_number: null,
@@ -234,6 +257,13 @@ export const invoiceRepo = {
     emitDataChanged();
   },
   recordPayment: async (invoiceId, amount, method, notes, actorUserId) => {
+    if (!(amount > 0)) throw new Error('Payment amount must be greater than zero.');
+    const current = await invoiceRepo.byId(invoiceId);
+    if (!['unpaid', 'partially_paid'].includes(current.status)) {
+      throw new Error('Payments can only be recorded on finalized, unpaid invoices.');
+    }
+    const due = await invoiceRepo.amountDue(invoiceId);
+    if (amount > due + 0.001) throw new Error(`Payment exceeds the amount due (${due}).`);
     await insert('payments', {
       invoice_id: invoiceId, amount, method: method || 'cash',
       payment_date: nowIso(), notes: notes || null, recorded_by_user_id: actorUserId,
@@ -302,7 +332,10 @@ export const closeoutRepo = {
   },
   forDate: (date) => {
     const [s] = dayRange(date);
-    return get(`SELECT * FROM day_closeouts WHERE closeout_date=? AND ${LIVE}`, [s]);
+    // Latest closeout for the day wins: a reopened day closed again has
+    // several rows, and only the newest one reflects the current state.
+    return get(`SELECT * FROM day_closeouts WHERE closeout_date=? AND ${LIVE}
+                ORDER BY created_at DESC LIMIT 1`, [s]);
   },
   list: () => all(`SELECT * FROM day_closeouts WHERE ${LIVE} ORDER BY closeout_date DESC LIMIT 30`),
   confirm: async (date, expected, counted, notes, actorUserId) => {

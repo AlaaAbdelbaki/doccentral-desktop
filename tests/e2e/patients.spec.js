@@ -23,7 +23,6 @@ test('add, search, edit and soft-delete a patient', async ({ page }) => {
   await page.getByRole('button', { name: 'Edit' }).click();
   await field(page, 'Phone').fill('+216 20 999 888');
   await modal(page).getByRole('button', { name: 'Save' }).click();
-  await page.locator('.list-row', { hasText: 'Sami Jebali' }).click(); // see KNOWN BUG below
   await expect(page.locator('.drawer-meta')).toContainText('+216 20 999 888');
 
   await page.locator('.card-actions').getByRole('button', { name: 'Delete' }).click();
@@ -42,8 +41,6 @@ test('treatment plan: add, then cancel a planned item', async ({ page }) => {
   await field(page, 'Tooth').fill('14');
   await field(page, 'Estimated fee').fill('95');
   await modal(page).getByRole('button', { name: 'Add to plan' }).click();
-  await page.locator('.list-row', { hasText: 'Yasmine Gharbi' }).click(); // see KNOWN BUG below
-  await page.getByRole('button', { name: 'Treatment plan' }).click();
 
   const row = page.locator('.dtable tr', { hasText: 'Composite filling' });
   await expect(row).toContainText('Planned');
@@ -51,8 +48,6 @@ test('treatment plan: add, then cancel a planned item', async ({ page }) => {
   await snap(page, 'plan-added');
 
   await row.getByRole('button').click(); // cancel (x)
-  await page.locator('.list-row', { hasText: 'Yasmine Gharbi' }).click(); // see KNOWN BUG below
-  await page.getByRole('button', { name: 'Treatment plan' }).click();
   await expect(row).toContainText('Cancelled');
 });
 
@@ -64,14 +59,11 @@ test('dental chart: plan treatment from a tooth', async ({ page }) => {
   await expect(field(page, 'Tooth')).toHaveValue('3');
   await field(page, 'Procedure (required)').fill('Crown prep');
   await modal(page).getByRole('button', { name: 'Add to plan' }).click();
-  await page.locator('.list-row', { hasText: 'Hedi Mzali' }).click(); // see KNOWN BUG below
-  await page.getByRole('button', { name: 'Dental chart' }).click();
   await expect(page.locator('.big-tooth.watch', { hasText: /^3$/ })).toBeVisible();
   await snap(page, 'chart-planned-tooth');
 });
 
-test('KNOWN BUG: saving anything on the Patients page jumps to the first patient', async ({ page }) => {
-  test.fail(true, 'PatientsPage subscribes a stale load() closure (selId=null) to onDataChanged');
+test('regression: saving on the Patients page keeps the selected patient', async ({ page }) => {
   await page.locator('.list-row', { hasText: 'Yasmine Gharbi' }).click();
   await page.getByRole('button', { name: 'Treatment plan' }).click();
   await page.locator('.card-head').getByRole('button', { name: 'Add' }).click();
