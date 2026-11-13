@@ -99,6 +99,7 @@ const createWindow = () => {
     minHeight: 700,
     backgroundColor: '#F7F9FC',
     title: 'DocCentral',
+    icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

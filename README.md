@@ -34,6 +34,11 @@ npm run dist     # → release/DocCentral-Setup-<version>.exe (NSIS, per-user in
 npm run pack     # unpacked app in release/win-unpacked/ for a quick check
 ```
 
+App icon: `build/icon.svg` (tooth) is the source; `build/icon-alt-d.svg` is an
+alternative "D" monogram kept for reference. After editing an SVG, run
+`npm run icons` to regenerate the 1024px PNGs (electron-builder derives the
+Windows `.ico` from `build/icon.png`).
+
 The installer is not code-signed yet, so Windows SmartScreen shows an
 "unknown publisher" warning on first run (More info → Run anyway).
 Uninstalling keeps the clinic data in `%APPDATA%\DocCentral`.
