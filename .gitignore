@@ -3,3 +3,5 @@ dist/
 *.png
 test-results/
 playwright-report/
+release/
+!build/*.png

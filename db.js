@@ -81,16 +81,93 @@ CREATE TABLE IF NOT EXISTS day_closeouts (${META},
   delta REAL NOT NULL, notes TEXT, actor_user_id TEXT NOT NULL, reopened_at TEXT);
 `;
 
+const BACKUPS_KEPT = 7;
+
 let db = null;
 let dbFile = null;
 let saveTimer = null;
+// What open() had to do, for the UI to report: null | { kind, kept, backup }.
+let recovery = null;
+let dataDir = null;
+let lastBackupDay = null;
+let now = () => new Date(); // injectable clock (tests)
 
-async function open(userDataDir) {
+// Local calendar day, e.g. 2026-11-13 (not UTC — backups follow the clinic's day).
+const localDay = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Write durably: temp file + fsync + rename. A crash or power cut mid-save
+// leaves either the old or the new file intact, never a half-written one.
+function writeAtomic(file, bytes) {
+  const tmp = `${file}.tmp`;
+  const fd = fs.openSync(tmp, 'w');
+  try {
+    fs.writeSync(fd, bytes);
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+  fs.renameSync(tmp, file);
+}
+
+// Returns an open sql.js Database if the bytes are a readable SQLite file.
+function tryLoad(SQL, bytes) {
+  try {
+    const d = new SQL.Database(bytes);
+    const [res] = d.exec('PRAGMA integrity_check');
+    if (res && res.values[0][0] === 'ok') return d;
+    d.close();
+  } catch {}
+  return null;
+}
+
+const backupDir = (dir) => path.join(dir, 'backups');
+const listBackups = (dir) => {
+  const d = backupDir(dir);
+  return fs.existsSync(d)
+    ? fs.readdirSync(d).filter((f) => /^doccentral-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort()
+    : [];
+};
+
+// One backup per day of the last known-good database, keeping the newest N.
+function dailyBackup(dir, bytes) {
+  const d = backupDir(dir);
+  fs.mkdirSync(d, { recursive: true });
+  const stamp = localDay(now());
+  lastBackupDay = stamp;
+  const target = path.join(d, `doccentral-${stamp}.db`);
+  if (!fs.existsSync(target)) writeAtomic(target, bytes);
+  const all = listBackups(dir);
+  for (const old of all.slice(0, Math.max(0, all.length - BACKUPS_KEPT))) {
+    fs.rmSync(path.join(d, old), { force: true });
+  }
+}
+
+async function open(userDataDir, { clock } = {}) {
+  now = clock || (() => new Date());
+  dataDir = userDataDir;
   const SQL = await initSqlJs({
     locateFile: (f) => path.join(__dirname, 'node_modules', 'sql.js', 'dist', f),
   });
   dbFile = path.join(userDataDir, 'doccentral.db');
-  db = fs.existsSync(dbFile) ? new SQL.Database(fs.readFileSync(dbFile)) : new SQL.Database();
+  db = null;
+  recovery = null;
+  fs.rmSync(`${dbFile}.tmp`, { force: true }); // leftover from an interrupted save
+
+  if (fs.existsSync(dbFile)) {
+    db = tryLoad(SQL, fs.readFileSync(dbFile));
+    if (!db) {
+      // Corrupt main file: keep it for inspection, restore the newest good backup.
+      const kept = `${dbFile}.corrupt-${Date.now()}`;
+      fs.renameSync(dbFile, kept);
+      for (const b of listBackups(userDataDir).reverse()) {
+        db = tryLoad(SQL, fs.readFileSync(path.join(backupDir(userDataDir), b)));
+        if (db) { recovery = { kind: 'restored', kept, backup: b }; break; }
+      }
+      if (!db) recovery = { kind: 'reset', kept, backup: null };
+    }
+  }
+  if (!db) db = new SQL.Database();
   db.exec(SCHEMA);
   save();
   return db;
@@ -98,7 +175,12 @@ async function open(userDataDir) {
 
 function save() {
   if (!db || !dbFile) return;
-  fs.writeFileSync(dbFile, Buffer.from(db.export()));
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  const bytes = Buffer.from(db.export());
+  writeAtomic(dbFile, bytes);
+  // First save of each day (app may stay open for days) also snapshots a backup.
+  if (localDay(now()) !== lastBackupDay) dailyBackup(dataDir, bytes);
 }
 
 function scheduleSave() {
@@ -126,4 +208,16 @@ function run(sql, params = []) {
   return { changes: db.getRowsModified() };
 }
 
-module.exports = { open, save, all, get, run };
+function close() {
+  if (!db) return;
+  save();
+  db.close();
+  db = null;
+  dbFile = null;
+  dataDir = null;
+  lastBackupDay = null;
+}
+
+const lastRecovery = () => recovery;
+
+module.exports = { open, save, close, all, get, run, lastRecovery, BACKUPS_KEPT };

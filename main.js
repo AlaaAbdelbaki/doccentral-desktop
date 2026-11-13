@@ -4,6 +4,12 @@ const fs = require('fs');
 const crypto = require('crypto');
 const db = require('./db');
 
+// Dev / self-check flags (DOC_DEV_AUTOLOGIN, DOC_SCRIPT, DOC_DATA_DIR, …) only
+// work when running from source. In an installed build they are ignored:
+// otherwise anyone could skip sign-in (DOC_DEV_AUTOLOGIN) or run arbitrary
+// code inside the app (DOC_SCRIPT) just by setting an environment variable.
+const devEnv = app.isPackaged ? {} : process.env;
+
 const MIME = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
   '.webp': 'image/webp', '.bmp': 'image/bmp', '.pdf': 'application/pdf',
@@ -61,11 +67,28 @@ function registerIpc(win) {
   });
 
   ipcMain.handle('app:info', () => ({
-    devAutologin: !!process.env.DOC_DEV_AUTOLOGIN,
-    testLogin: process.env.DOC_TEST_LOGIN || null,
-    initialPage: process.env.DOC_PAGE || null,
+    devAutologin: !!devEnv.DOC_DEV_AUTOLOGIN,
+    testLogin: devEnv.DOC_TEST_LOGIN || null,
+    initialPage: devEnv.DOC_PAGE || null,
     userData: app.getPath('userData'),
   }));
+}
+
+// Tell staff when the database had to be restored, so they re-enter anything
+// recorded since the backup (or know that the data was lost).
+function warnIfRecovered(win) {
+  const r = db.lastRecovery();
+  if (!r || devEnv.DOC_SCREENSHOT) return;
+  const detail = r.kind === 'restored'
+    ? `The local database was damaged and has been restored from the backup "${r.backup}". `
+      + 'Anything recorded after that backup was taken may be missing and should be re-entered.'
+    : 'The local database was damaged and no usable backup was found, so an empty database was created.';
+  dialog.showMessageBox(win, {
+    type: 'warning',
+    title: 'DocCentral — database recovered',
+    message: r.kind === 'restored' ? 'Your data was restored from a backup' : 'Your data could not be recovered',
+    detail: `${detail}\n\nThe damaged file was kept at:\n${r.kept}`,
+  });
 }
 
 const createWindow = () => {
@@ -76,6 +99,7 @@ const createWindow = () => {
     minHeight: 700,
     backgroundColor: '#F7F9FC',
     title: 'DocCentral',
+    icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -86,24 +110,26 @@ const createWindow = () => {
   win.setMenuBarVisibility(false);
   registerIpc(win);
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  warnIfRecovered(win);
 
   // Headless self-check hooks:
   //   DOC_CONSOLE_LOG=<file>  append renderer console messages
   //   DOC_SCRIPT=<file.js>    run a DOM script after load (drives the UI)
   //   DOC_SCREENSHOT=<file>   capture the page and quit
-  if (process.env.DOC_CONSOLE_LOG) {
-    win.webContents.on('console-message', (_e, level, message, line, sourceId) => {
-      fs.appendFileSync(process.env.DOC_CONSOLE_LOG, `[${level}] ${message} (${sourceId}:${line})\n`);
+  if (devEnv.DOC_CONSOLE_LOG) {
+    // Electron 35+ passes a single event object (positional args were removed).
+    win.webContents.on('console-message', (e) => {
+      fs.appendFileSync(devEnv.DOC_CONSOLE_LOG, `[${e.level}] ${e.message} (${e.sourceId}:${e.lineNumber})\n`);
     });
   }
-  const shot = process.env.DOC_SCREENSHOT;
+  const shot = devEnv.DOC_SCREENSHOT;
   if (shot) {
     win.webContents.once('did-finish-load', async () => {
-      await new Promise((r) => setTimeout(r, Number(process.env.DOC_SCREENSHOT_DELAY || 2500)));
-      if (process.env.DOC_SCRIPT) {
+      await new Promise((r) => setTimeout(r, Number(devEnv.DOC_SCREENSHOT_DELAY || 2500)));
+      if (devEnv.DOC_SCRIPT) {
         let result;
         try {
-          result = await win.webContents.executeJavaScript(fs.readFileSync(process.env.DOC_SCRIPT, 'utf8'));
+          result = await win.webContents.executeJavaScript(fs.readFileSync(devEnv.DOC_SCRIPT, 'utf8'));
         } catch (err) {
           result = 'SCRIPT ERROR: ' + (err && err.message ? err.message : err);
         }
@@ -118,9 +144,9 @@ const createWindow = () => {
 };
 
 app.whenReady().then(async () => {
-  const dataDir = process.env.DOC_DATA_DIR || app.getPath('userData');
+  const dataDir = devEnv.DOC_DATA_DIR || app.getPath('userData');
   fs.mkdirSync(dataDir, { recursive: true });
-  if (process.env.DOC_DATA_DIR) app.setPath('userData', dataDir);
+  if (devEnv.DOC_DATA_DIR) app.setPath('userData', dataDir);
   await db.open(dataDir);
   createWindow();
 });
