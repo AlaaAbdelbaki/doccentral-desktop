@@ -337,7 +337,10 @@ export const PatientsPage = ({ onNavigate, badges, params }) => {
     const list = await patientRepo.list();
     setPatients(list);
     setOwedIds(new Set((await patientRepo.outstanding()).map((p) => p.id)));
-    if (!selId && list.length) setSelId(list[0].id);
+    // Functional update: this load() is subscribed once, so a captured selId
+    // would be stale (always null) and every data change would reset the
+    // selection to the first patient. Keep the current selection if it still exists.
+    setSelId((cur) => (cur && list.some((p) => p.id === cur) ? cur : list[0]?.id || null));
   };
   useEffect(() => { load(); return onDataChanged(load); }, []);
 
