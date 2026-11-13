@@ -225,11 +225,12 @@ export const SettingsPage = ({ onNavigate, badges, params }) => {
                         )}
                         {sync.needsSetup && (
                           <div className="warn-banner">
-                            <b>Cloud tables not set up yet.</b>
+                            <b>Cloud setup missing or out of date.</b>
                             <div>
-                              The Supabase project has no tables to sync into. Tables can't be created
-                              through the app's API key — run the bundled migration once in the Supabase
-                              SQL editor, then sync resumes automatically (records are safe locally meanwhile).
+                              The Supabase project is missing the tables or the latest access rules this
+                              version needs. They can't be changed through the app's API key — copy the setup
+                              SQL below and run it once in the Supabase SQL editor (safe to run again), then
+                              sync resumes automatically. Records are safe locally meanwhile.
                             </div>
                             <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                               <button className="btn-ghost" onClick={async () => {

@@ -9,8 +9,10 @@
 -- * Idempotent: safe to re-run (create table if not exists / drop policy if exists).
 -- * No foreign keys on purpose — the offline-first push syncs table by table
 --   with last-write-wins and must never be rejected for ordering reasons.
--- * RLS: any authenticated clinic user gets full access. Tighten to per-clinic
---   policies before onboarding a second clinic.
+-- * RLS is enabled with no policies here, so nothing is accessible until
+--   0002_clinic_isolation_and_sync.sql adds the per-clinic rules. (An earlier
+--   version granted every signed-in user full access; re-running it after
+--   0002 would have re-opened the data, since policies are OR-ed.)
 
 create table if not exists public.clinics (
   id uuid primary key,
@@ -283,7 +285,7 @@ create table if not exists public.day_closeouts (
   reopened_at timestamptz
 );
 
--- Row Level Security: full access for any authenticated user (single-clinic MVP).
+-- Row Level Security on, no policies: deny by default (see 0002).
 do $$
 declare t text;
 begin
@@ -297,7 +299,5 @@ begin
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists authenticated_all on public.%I', t);
-    execute format(
-      'create policy authenticated_all on public.%I for all to authenticated using (true) with check (true)', t);
   end loop;
 end $$;

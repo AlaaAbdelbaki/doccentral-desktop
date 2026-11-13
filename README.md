@@ -15,10 +15,26 @@ payments, inventory, documents/attachments, day closeout, settings
 - **Auth** — Supabase email+password (same project as the Flutter app);
   first sign-up provisions the clinic + owner Dentist user + roles locally.
   Sessions persist across restarts and work offline.
-- **Sync** — pending rows are pushed to same-named Supabase tables every 60s
-  and marked `synced` (best effort: if the remote schema doesn't exist yet,
-  rows stay pending and the app keeps working offline).
+- **Sync** — two-way, every 60s and on reconnect (`src/lib/sync-core.js`).
+  Pending local rows are pushed; changes from other devices are pulled by a
+  server-stamped `server_updated_at` cursor (device clocks aren't trusted).
+  Conflicts: the newest `updated_at` wins, enforced server-side. A fresh
+  computer downloads the clinic on first sign-in. Offline, everything keeps
+  working and syncs later.
+- **Cloud access rules** — every row carries `clinic_id`; Supabase Row Level
+  Security limits each account to the clinics it belongs to (a live row in
+  `users`). Nobody can add themselves to another clinic; hard deletes are
+  blocked. On a computer that already holds a clinic, only its members can
+  sign in.
 - **Renderer** — React 18 bundled with esbuild; UI → repository → IPC bridge.
+
+### Cloud setup (once per Supabase project)
+
+Run `supabase/migrations/0001_init_doccentral.sql` then
+`0002_clinic_isolation_and_sync.sql` in the Supabase SQL editor — or use
+**Settings → Data & sync → Copy migration SQL**, which bundles both. Both are
+idempotent. A project holding exactly one clinic has its existing rows
+assigned to it automatically.
 
 ## Run
 
@@ -55,7 +71,8 @@ Uninstalling keeps the clinic data in `%APPDATA%\DocCentral`.
 ## Tests
 
 ```bash
-npm run test:unit        # database persistence (node:test)
+npm run test:unit        # persistence, cloud access rules and two-device sync
+                         # (real Postgres via PGlite — no Supabase needed)
 npm run test:e2e         # Playwright end-to-end, drives the real app
 npm run test:e2e:report  # HTML report with screenshots + videos
 ```

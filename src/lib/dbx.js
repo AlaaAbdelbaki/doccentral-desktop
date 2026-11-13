@@ -12,8 +12,22 @@ export const newMeta = () => {
   return { id: uuid(), created_at: t, updated_at: t, deleted_at: null, sync_status: 'pending' };
 };
 
+// One device holds one clinic: every clinic-scoped row is stamped with its id
+// (the cloud access rules key on clinic_id). Cached after the first lookup.
+let clinicIdCache = null;
+const localClinicId = async () => {
+  if (!clinicIdCache) {
+    const c = await get(`SELECT id FROM clinics WHERE deleted_at IS NULL ORDER BY created_at LIMIT 1`);
+    clinicIdCache = c ? c.id : null;
+  }
+  return clinicIdCache;
+};
+export const resetClinicCache = () => { clinicIdCache = null; };
+
 export async function insert(table, fields) {
   const row = { ...newMeta(), ...fields };
+  if (table === 'clinics') resetClinicCache();
+  else if (row.clinic_id === undefined) row.clinic_id = await localClinicId();
   const cols = Object.keys(row);
   await run(
     `INSERT INTO ${table} (${cols.join(',')}) VALUES (${cols.map(() => '?').join(',')})`,
