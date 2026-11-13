@@ -27,6 +27,34 @@ npm install
 npm start
 ```
 
+## Build the Windows installer
+
+```bash
+npm run dist     # → release/DocCentral-Setup-<version>.exe (NSIS, per-user install)
+npm run pack     # unpacked app in release/win-unpacked/ for a quick check
+```
+
+The installer is not code-signed yet, so Windows SmartScreen shows an
+"unknown publisher" warning on first run (More info → Run anyway).
+Uninstalling keeps the clinic data in `%APPDATA%\DocCentral`.
+
+## Data safety
+
+- Saves are atomic (temp file + fsync + rename), so a crash or power cut
+  mid-save cannot corrupt `doccentral.db`.
+- A backup is kept per day in `userData/backups/` (newest 7).
+- If the database is found damaged on start-up, it is kept aside as
+  `doccentral.db.corrupt-<timestamp>`, the newest good backup is restored,
+  and the user is shown what happened.
+
+## Tests
+
+```bash
+npm run test:unit        # database persistence (node:test)
+npm run test:e2e         # Playwright end-to-end, drives the real app
+npm run test:e2e:report  # HTML report with screenshots + videos
+```
+
 ## Dev / self-check flags (environment variables)
 
 | Var | Effect |

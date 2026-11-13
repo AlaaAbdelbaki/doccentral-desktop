@@ -2,7 +2,7 @@
   "name": "doccentral-desktop",
   "productName": "DocCentral",
   "version": "0.1.0",
-  "description": "DocCentral desktop prototype — Patients page (Electron, faithful to the claude.ai/design DentaCore Patients design)",
+  "description": "DocCentral desktop — dental clinic management (Electron, offline-first SQLite, Supabase sync)",
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -10,17 +10,58 @@
     "start": "npm run build && electron .",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report",
-    "test:unit": "node --test tests/unit/*.test.js"
+    "test:unit": "node --test tests/unit/*.test.js",
+    "pack": "npm run build && electron-builder --win --dir",
+    "dist": "npm run build && electron-builder --win",
+    "postinstall": "install-electron"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "sql.js": "^1.14.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
-    "electron": "^33.2.0",
-    "esbuild": "^0.24.0"
+    "@supabase/supabase-js": "^2.119.0",
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "author": "DocCentral",
+  "build": {
+    "appId": "com.doccentral.desktop",
+    "productName": "DocCentral",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "db.js",
+      "preload.js",
+      "package.json",
+      "src/index.html",
+      "src/*.css",
+      "dist/bundle.js"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DocCentral",
+      "deleteAppDataOnUninstall": false
+    },
+    "artifactName": "${productName}-Setup-${version}.${ext}"
   }
 }
