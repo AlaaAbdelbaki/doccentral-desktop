@@ -1,61 +1,60 @@
-// Best-effort sync engine — the same sync-metadata pattern as the Flutter app:
-// rows are written locally with sync_status='pending'; when online we push them
-// to same-named Supabase tables (upsert, last-write-wins by updated_at) and mark
-// them 'synced'. If the remote schema is absent or unreachable, rows simply stay
-// pending — the app is fully functional offline.
-import { all, run } from './dbx.js';
+// App wiring for the two-way sync engine (sync-core.js): local SQLite via the
+// IPC bridge, Supabase as the remote. Runs every 60s and when the network
+// comes back. Offline or not set up yet, records stay pending locally and the
+// app keeps working.
+import { all, run, emitDataChanged, resetClinicCache } from './dbx.js';
 import { supabase } from './supabase.js';
-import MIGRATION_SQL from '../../supabase/migrations/0001_init_doccentral.sql';
+import { createSyncEngine, SYNC_TABLES } from './sync-core.js';
+import MIGRATION_0001 from '../../supabase/migrations/0001_init_doccentral.sql';
+import MIGRATION_0002 from '../../supabase/migrations/0002_clinic_isolation_and_sync.sql';
 
-export { MIGRATION_SQL };
-// PostgREST error when the remote schema hasn't been provisioned yet.
-const isMissingTable = (msg) => /schema cache|does not exist/i.test(msg || '');
+export { SYNC_TABLES };
+// Both scripts are idempotent and safe to run in order on any project.
+export const MIGRATION_SQL = `${MIGRATION_0001}\n\n${MIGRATION_0002}`;
 
-export const SYNC_TABLES = [
-  'clinics', 'users', 'roles', 'user_roles', 'patients',
-  'appointments', 'appointment_cancellations', 'appointment_planned_treatments',
-  'visits', 'performed_treatments', 'planned_treatments',
-  'invoices', 'invoice_items', 'payments', 'invoice_voids',
-  'inventory_items', 'restock_events', 'stock_adjustments',
-  'attachments', 'day_closeouts',
-];
+// PostgREST errors when the cloud schema (or the 0002 upgrade) is missing.
+const isMissingSchema = (msg) => /schema cache|does not exist|server_updated_at|clinic_id/i.test(msg || '');
+// PostgREST filter values containing . : , ( ) must be double-quoted.
+const q = (v) => `"${v}"`;
+
+const supabaseRemote = {
+  upsert: (table, rows) => supabase.from(table).upsert(rows, { onConflict: 'id' }),
+  async page(table, { afterTs, afterId, limit }) {
+    let query = supabase.from(table).select('*').order('server_updated_at').order('id').limit(limit);
+    if (afterTs) {
+      query = query.or(afterId
+        ? `server_updated_at.gt.${q(afterTs)},and(server_updated_at.eq.${q(afterTs)},id.gt.${afterId})`
+        : `server_updated_at.gt.${q(afterTs)}`);
+    }
+    const { data, error } = await query;
+    return { rows: data || [], error };
+  },
+};
+
+const engine = createSyncEngine({ local: { all, run }, remote: supabaseRemote });
 
 const listeners = new Set();
 let state = { status: 'idle', pending: 0, lastSync: null, error: null, errors: [] };
-
 export const onSyncState = (fn) => { listeners.add(fn); fn(state); return () => listeners.delete(fn); };
 const setState = (patch) => { state = { ...state, ...patch }; listeners.forEach((fn) => fn(state)); };
 
-export async function pendingCount() {
-  let n = 0;
-  for (const t of SYNC_TABLES) {
-    const r = await all(`SELECT COUNT(*) AS n FROM ${t} WHERE sync_status='pending'`);
-    n += r[0].n;
-  }
-  return n;
+export const pendingCount = () => engine.pendingCount();
+
+let inFlight = null;
+export function syncNow(session) {
+  // Never run two syncs at once (timer + button + reconnect).
+  if (!inFlight) inFlight = doSync(session).finally(() => { inFlight = null; });
+  return inFlight;
 }
 
-export async function syncNow(session) {
+async function doSync(session) {
   if (!session) {
     setState({ status: 'offline', pending: await pendingCount(), errors: [], error: 'Not signed in — records kept locally' });
     return 0;
   }
   setState({ status: 'syncing', error: null });
-  let pushed = 0;
-  const errors = [];
-  for (const table of SYNC_TABLES) {
-    const rows = await all(`SELECT * FROM ${table} WHERE sync_status='pending'`);
-    if (!rows.length) continue;
-    try {
-      const { error } = await supabase.from(table).upsert(rows, { onConflict: 'id' });
-      if (error) throw error;
-      for (const r of rows) await run(`UPDATE ${table} SET sync_status='synced' WHERE id=?`, [r.id]);
-      pushed += rows.length;
-    } catch (e) {
-      // Remote table missing / offline / RLS — rows stay pending locally.
-      errors.push({ table, count: rows.length, message: (e && e.message) || String(e) });
-    }
-  }
+  const { pushed, pulled, errors } = await engine.sync();
+  if (pulled) { resetClinicCache(); emitDataChanged(); }
   const pending = await pendingCount();
   setState({
     status: errors.length ? (pending ? 'pending' : 'idle') : 'synced',
@@ -63,17 +62,51 @@ export async function syncNow(session) {
     lastSync: errors.length ? state.lastSync : new Date(),
     error: errors.length ? `${errors.length} table(s) failed to sync — records kept locally` : null,
     errors,
-    needsSetup: errors.some((e) => isMissingTable(e.message)),
+    needsSetup: errors.some((e) => isMissingSchema(e.message)),
   });
-  return pushed;
+  return pushed + pulled;
+}
+
+// Which clinic(s) does this account belong to in the cloud?
+//   { online: false }                       → couldn't reach / not set up
+//   { online: true, membership: row|null }  → live users row for this account
+//   { online: true, membership: null, schemaMissing: true } → cloud not set up
+export async function fetchMembership(authUserId) {
+  try {
+    const { data, error } = await supabase.from('users').select('*')
+      .eq('auth_user_id', authUserId).is('deleted_at', null).limit(1);
+    if (error) {
+      // Reachable, but the cloud tables aren't set up: nobody can be verified.
+      if (isMissingSchema(error.message)) return { online: true, membership: null, schemaMissing: true };
+      return { online: false, error: error.message };
+    }
+    return { online: true, membership: data[0] || null };
+  } catch (e) {
+    return { online: false, error: e.message || String(e) };
+  }
+}
+
+// First sign-in on a device: download the whole clinic before showing it.
+export async function initialPull() {
+  const res = await engine.pull();
+  resetClinicCache();
+  emitDataChanged();
+  return res;
 }
 
 let timer = null;
+let onlineHandler = null;
 export function startAutoSync(getSession) {
   stopAutoSync();
   const tick = () => syncNow(getSession()).catch(() => {});
   timer = setInterval(tick, 60_000);
-  window.addEventListener('online', tick);
+  onlineHandler = tick;
+  window.addEventListener('online', onlineHandler);
   tick();
 }
-export function stopAutoSync() { if (timer) clearInterval(timer); timer = null; }
+export function stopAutoSync() {
+  if (timer) clearInterval(timer);
+  if (onlineHandler) window.removeEventListener('online', onlineHandler);
+  timer = null;
+  onlineHandler = null;
+}

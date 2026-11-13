@@ -81,6 +81,35 @@ CREATE TABLE IF NOT EXISTS day_closeouts (${META},
   delta REAL NOT NULL, notes TEXT, actor_user_id TEXT NOT NULL, reopened_at TEXT);
 `;
 
+// Tables whose rows belong to a clinic (everything but clinics itself).
+const CLINIC_SCOPED = [
+  'users', 'roles', 'user_roles', 'patients',
+  'appointments', 'appointment_cancellations', 'appointment_planned_treatments',
+  'visits', 'performed_treatments', 'planned_treatments',
+  'invoices', 'invoice_items', 'payments', 'invoice_voids',
+  'inventory_items', 'restock_events', 'stock_adjustments',
+  'attachments', 'day_closeouts',
+];
+
+// Bring any database (new or existing) up to the current schema. Exported so
+// tests can build independent databases (one per simulated device).
+function migrate(d) {
+  d.exec(SCHEMA);
+  // Pull cursor per table: last server_updated_at / id seen from the cloud.
+  d.exec(`CREATE TABLE IF NOT EXISTS sync_state (
+    table_name TEXT PRIMARY KEY, cursor_ts TEXT, cursor_id TEXT)`);
+  // clinic_id on every clinic-scoped table (cloud access rules key on it).
+  // One device holds one clinic, so existing rows belong to the local clinic.
+  // Not re-marked pending: the cloud migration assigns already-synced rows.
+  const [clinic] = d.exec(`SELECT id FROM clinics WHERE deleted_at IS NULL ORDER BY created_at LIMIT 1`);
+  const clinicId = clinic ? clinic.values[0][0] : null;
+  for (const t of CLINIC_SCOPED) {
+    const cols = d.exec(`PRAGMA table_info(${t})`)[0].values.map((r) => r[1]);
+    if (!cols.includes('clinic_id')) d.exec(`ALTER TABLE ${t} ADD COLUMN clinic_id TEXT`);
+    if (clinicId) d.run(`UPDATE ${t} SET clinic_id=? WHERE clinic_id IS NULL`, [clinicId]);
+  }
+}
+
 const BACKUPS_KEPT = 7;
 
 let db = null;
@@ -168,7 +197,7 @@ async function open(userDataDir, { clock } = {}) {
     }
   }
   if (!db) db = new SQL.Database();
-  db.exec(SCHEMA);
+  migrate(db);
   save();
   return db;
 }
@@ -220,4 +249,4 @@ function close() {
 
 const lastRecovery = () => recovery;
 
-module.exports = { open, save, close, all, get, run, lastRecovery, BACKUPS_KEPT };
+module.exports = { open, save, close, all, get, run, lastRecovery, migrate, CLINIC_SCOPED, BACKUPS_KEPT };
