@@ -270,4 +270,5 @@ synced, signing in downloads it again.
 
 ## License
 
-No license has been chosen yet, so all rights are reserved by default.
+Proprietary — all rights reserved. See [LICENSE](LICENSE); no use, copying
+or distribution without written permission.
