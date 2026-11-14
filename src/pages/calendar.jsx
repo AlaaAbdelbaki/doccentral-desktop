@@ -32,16 +32,24 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
       notes: appt?.notes || '',
     };
   });
-  // Patients/providers may finish loading after the modal mounts (e.g. Home →
-  // "New appointment") — backfill the defaults once the lists arrive.
+  // Providers may finish loading after the modal mounts (e.g. Home →
+  // "New appointment") — backfill the provider once the list arrives (usually
+  // 1–2 people). The patient is never defaulted: a silent pick of the first
+  // patient leads to wrong-patient bookings, so the user must choose.
   useEffect(() => {
-    setForm((f) => ({
-      ...f,
-      patient_id: f.patient_id || patients[0]?.id || '',
-      assigned_user_id: f.assigned_user_id || providers[0]?.id || '',
-    }));
-  }, [patients, providers]);
+    setForm((f) => ({ ...f, assigned_user_id: f.assigned_user_id || providers[0]?.id || '' }));
+  }, [providers]);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Searchable patient list: same order as the Patients page (repo sorts by
+  // last name, first name). The selected patient always stays in the list.
+  const [patientQ, setPatientQ] = useState('');
+  const patientOptions = useMemo(() => {
+    const q = patientQ.trim().toLowerCase();
+    if (!q) return patients;
+    return patients.filter((p) => p.id === form.patient_id
+      || fullName(p).toLowerCase().includes(q) || (p.phone || '').includes(q));
+  }, [patients, patientQ, form.patient_id]);
 
   // Live slot-conflict check for the selected provider and time window.
   const [conflicts, setConflicts] = useState([]);
@@ -93,9 +101,14 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
         </div>
       )}
       <Field label={t('Patient')}>
-        <select value={form.patient_id} onChange={set('patient_id')}>
-          {patients.map((p) => <option key={p.id} value={p.id}>{fullName(p)}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <select value={form.patient_id} onChange={set('patient_id')} style={{ flex: 1, minWidth: 0 }}>
+            <option value="" disabled>{t('Choose a patient…')}</option>
+            {patientOptions.map((p) => <option key={p.id} value={p.id}>{fullName(p)}</option>)}
+          </select>
+          <input type="search" aria-label={t('Search name or phone…')} placeholder={t('Search name or phone…')}
+            value={patientQ} onChange={(e) => setPatientQ(e.target.value)} style={{ width: 190 }}/>
+        </div>
       </Field>
       <Field label={t('Provider')}>
         <select value={form.assigned_user_id} onChange={set('assigned_user_id')}>
@@ -218,7 +231,8 @@ export const CalendarPage = ({ onNavigate, badges, params }) => {
   const [appts, setAppts] = useState([]);
   const [patients, setPatients] = useState([]);
   const [providers, setProviders] = useState([]);
-  const [modal, setModal] = useState(params?.new ? { kind: 'new' } : null);
+  // "Book visit" from a patient passes { new: true, patientId } to preselect them.
+  const [modal, setModal] = useState(params?.new ? { kind: 'new', patientId: params.patientId } : null);
 
   const range = useMemo(() => {
     if (view === 'day') { const s = new Date(date); s.setHours(0, 0, 0, 0); return [s, addDays(s, 1)]; }
@@ -348,7 +362,7 @@ export const CalendarPage = ({ onNavigate, badges, params }) => {
         </div>
       </main>
 
-      {modal?.kind === 'new' && <AppointmentModal defaults={{ date: date.toISOString() }} patients={patients} providers={providers} onClose={() => setModal(null)}/>}
+      {modal?.kind === 'new' && <AppointmentModal defaults={{ date: date.toISOString(), patientId: modal.patientId }} patients={patients} providers={providers} onClose={() => setModal(null)}/>}
       {modal?.kind === 'edit' && <AppointmentModal appt={modal.appt} patients={patients} providers={providers} onClose={() => setModal(null)}/>}
       {modal?.kind === 'actions' && (
         <ApptActions appt={modal.appt} onClose={() => setModal(null)}

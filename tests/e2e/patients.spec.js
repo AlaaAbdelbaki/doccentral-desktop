@@ -74,3 +74,14 @@ test('regression: saving on the Patients page keeps the selected patient', async
   await expect(page.locator('.list-row.active'), 'selected patient after save')
     .toContainText('Yasmine Gharbi', { timeout: 2000 });
 });
+
+// Regression (critical #4): "Book visit" used to preselect the first patient in the list.
+test('"Book visit" preselects the patient being viewed', async ({ page }) => {
+  const [first] = await sql(page, `SELECT first_name, last_name FROM patients WHERE deleted_at IS NULL ORDER BY last_name, first_name LIMIT 1`);
+  const [other] = await sql(page, `SELECT id, first_name, last_name FROM patients WHERE deleted_at IS NULL ORDER BY last_name DESC, first_name DESC LIMIT 1`);
+  expect(`${other.first_name} ${other.last_name}`).not.toBe(`${first.first_name} ${first.last_name}`);
+  await page.locator('.list-row', { hasText: `${other.first_name} ${other.last_name}` }).click();
+  await page.getByRole('button', { name: 'Book visit' }).click();
+  await expect(modal(page)).toContainText('New appointment');
+  await expect(field(page, 'Patient')).toHaveValue(other.id);
+});

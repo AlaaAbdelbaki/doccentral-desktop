@@ -85,6 +85,7 @@ export default {
   // ---- calendar
   Today: "Aujourd'hui", Day: 'Jour', Week: 'Semaine', Month: 'Mois', 'Week of {date}': 'Semaine du {date}',
   'Edit appointment': 'Modifier le rendez-vous', 'Book anyway': 'Réserver quand même',
+  'Choose a patient…': 'Choisir un patient…',
   'No patients yet — add one from the Patients page first.': "Aucun patient — ajoutez-en un depuis la page Patients d'abord.",
   'End time must be after the start time.': "L'heure de fin doit être après l'heure de début.",
   'This slot is already booked:': 'Ce créneau est déjà réservé :',
