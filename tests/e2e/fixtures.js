@@ -3,6 +3,7 @@
 const base = require('@playwright/test');
 const { _electron: electron } = base;
 const fs = require('fs');
+const { spawnSync } = require('child_process');
 const os = require('os');
 const path = require('path');
 
@@ -17,6 +18,32 @@ const launchApp = (dataDir, { systemLanguage = 'en-US', videoDir } = {}) => elec
   ...(videoDir ? { recordVideo: { dir: videoDir, size: { width: 1440, height: 900 } } } : {}),
 });
 
+// Quit the app, but never let a stuck quit hang the run. On the Windows CI
+// runner Electron occasionally fails to exit after a passing test; waiting
+// out the 60 s timeout then fails the whole job. After 15 s the process is
+// killed and a warning is added to the report so a real hang stays visible.
+const CLOSE_TIMEOUT_MS = 15_000;
+const closeApp = async (app) => {
+  const proc = app.process();
+  let timer;
+  const closed = await Promise.race([
+    app.close().then(() => true, () => true),
+    new Promise((resolve) => { timer = setTimeout(() => resolve(false), CLOSE_TIMEOUT_MS); }),
+  ]);
+  clearTimeout(timer);
+  if (closed) return;
+  // Kill the whole tree: on Windows the renderer/GPU children otherwise keep
+  // running, hold the data dir open and keep the worker from exiting.
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+  } else {
+    try { proc.kill('SIGKILL'); } catch { /* already gone */ }
+  }
+  const info = base.test.info();
+  info.annotations.push({ type: 'warning', description: `Electron did not quit within ${CLOSE_TIMEOUT_MS / 1000} s; process killed` });
+  console.warn(`[e2e] ${info.title}: Electron did not quit within ${CLOSE_TIMEOUT_MS / 1000} s; killed`);
+};
+
 const test = base.test.extend({
   // The PC language the app sees. English by default so the suite behaves the
   // same on any machine (a French Windows would otherwise open in French).
@@ -25,14 +52,15 @@ const test = base.test.extend({
   dataDir: async ({}, use) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-e2e-'));
     await use(dir);
-    fs.rmSync(dir, { recursive: true, force: true });
+    // Best effort: a just-killed app may still hold files for a moment.
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch { /* temp dir */ }
   },
 
   app: async ({ dataDir, systemLanguage }, use, testInfo) => {
     const videoDir = testInfo.outputPath('video');
     const app = await launchApp(dataDir, { systemLanguage, videoDir });
     await use(app);
-    await app.close();
+    await closeApp(app);
     for (const f of fs.existsSync(videoDir) ? fs.readdirSync(videoDir) : []) {
       await testInfo.attach('video', { path: path.join(videoDir, f), contentType: 'video/webm' });
     }
@@ -69,4 +97,4 @@ const field = (page, label) =>
 // Raw SQL against the app's local DB (via the preload bridge) for assertions.
 const sql = (page, query, params = []) => page.evaluate(([q, p]) => window.dc.db.all(q, p), [query, params]);
 
-module.exports = { test, expect: base.expect, snap, nav, modal, field, sql, launchApp };
+module.exports = { test, expect: base.expect, snap, nav, modal, field, sql, launchApp, closeApp };
