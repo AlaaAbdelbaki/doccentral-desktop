@@ -5,3 +5,5 @@ test-results/
 playwright-report/
 release/
 !build/*.png
+!docs/images/*.png
+.demo-data/
