@@ -86,6 +86,7 @@ export default {
   // ---- calendar
   Today: 'اليوم', Day: 'يوم', Week: 'أسبوع', Month: 'شهر', 'Week of {date}': 'أسبوع {date}',
   'Edit appointment': 'تعديل الموعد', 'Book anyway': 'الحجز رغم ذلك',
+  'Choose a patient…': 'اختر مريضًا…',
   'No patients yet — add one from the Patients page first.': 'لا يوجد مرضى بعد — أضف مريضًا من صفحة المرضى أولًا.',
   'End time must be after the start time.': 'يجب أن يكون وقت النهاية بعد وقت البداية.',
   'This slot is already booked:': 'هذا الموعد محجوز مسبقًا:',

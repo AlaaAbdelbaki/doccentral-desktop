@@ -57,3 +57,22 @@ test('week and month views', async ({ page }) => {
   await expect(page.locator('.pill', { hasText: /appointments?/ }).first()).toBeVisible();
   await snap(page, 'month-view');
 });
+
+// Regression (critical #4): no silent first-patient default.
+test('"New appointment" from Home starts with no patient selected', async ({ page }) => {
+  await nav(page, 'Home');
+  await page.getByRole('button', { name: 'New appointment' }).click();
+  const patient = field(page, 'Patient');
+  await expect(patient).toHaveValue('');
+  await expect(patient.locator('option:checked')).toHaveText('Choose a patient…');
+  await expect(modal(page).getByRole('button', { name: /Save|Book anyway/ })).toBeDisabled();
+  await patient.selectOption({ label: 'Nadia Karoui' });
+  await expect(modal(page).getByRole('button', { name: /Save|Book anyway/ })).toBeEnabled();
+});
+
+test('patient picker filters by name or phone', async ({ page }) => {
+  await page.getByRole('button', { name: 'New appointment' }).click();
+  await modal(page).getByPlaceholder('Search name or phone…').fill('karoui');
+  const names = await field(page, 'Patient').locator('option:not([value=""])').allTextContents();
+  expect(names).toEqual(['Nadia Karoui']);
+});

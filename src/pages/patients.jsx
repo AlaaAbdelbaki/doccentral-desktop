@@ -401,7 +401,7 @@ export const PatientsPage = ({ onNavigate, badges, params }) => {
                       {owedIds.has(sel.id)
                         ? <span className="pill coral"><span className="pdot"/>{t('Balance due')}</span>
                         : <span className="pill mint"><span className="pdot"/>{t('Active')}</span>}
-                      <button className="btn-primary" onClick={() => onNavigate('calendar', { new: true })}><Icon name="calendar" size={14}/>{t('Book visit')}</button>
+                      <button className="btn-primary" onClick={() => onNavigate('calendar', { new: true, patientId: sel.id })}><Icon name="calendar" size={14}/>{t('Book visit')}</button>
                     </div>
                     <div style={{ display: 'flex', gap: 4, padding: '0 16px', borderTop: '1px solid var(--ink-100)' }}>
                       {[['overview', t('Overview')], ['plan', t('Treatment plan')], ['visits', t('Visits')], ['chart', t('Dental chart')]].map(([k, l]) => (
