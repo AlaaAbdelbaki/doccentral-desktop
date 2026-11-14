@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './icons.jsx';
 import { t, locale } from './lib/i18n.jsx';
+import { notifyError } from './toast.jsx';
 
 // Open modals, innermost last, so Escape closes only the topmost one.
 const modalStack = [];
@@ -61,6 +62,35 @@ export const useDirtyGuard = (initial, current, onClose) => {
     </Modal>
   ) : null;
   return { dirty, requestClose, prompt };
+};
+
+// A button whose action writes data. While the action runs the button is
+// disabled and a second click is ignored (a ref, not state, so even two clicks
+// in the same tick can't both start), which stops double-click duplicates.
+// A failure shows an error toast instead of failing silently.
+export const AsyncButton = ({ onClick, disabled, children, ...rest }) => {
+  const running = useRef(false);
+  const mounted = useRef(true);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => () => { mounted.current = false; }, []);
+  const run = async (e) => {
+    if (running.current) return;
+    running.current = true;
+    setBusy(true);
+    try {
+      await onClick(e);
+    } catch (err) {
+      notifyError(err);
+    } finally {
+      running.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  };
+  return (
+    <button type="button" {...rest} disabled={disabled || busy} aria-busy={busy || undefined} onClick={run}>
+      {children}
+    </button>
+  );
 };
 
 export const Field = ({ label, children }) => (

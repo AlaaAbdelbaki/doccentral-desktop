@@ -122,6 +122,26 @@ function deviceInfo({ app, screen, dataDir }) {
   };
 }
 
+// ---------------------------------------------------------------- IPC errors
+// Wrap ipcMain.handle so a failing handler is logged in main and its error
+// reaches the page as data ({ ok: false, error }) instead of Electron's
+// "Error invoking remote method …" string. preload.js unwraps it into a
+// normal Error with the original message and code.
+function wrapIpc(ipcMain, logger) {
+  return {
+    handle(channel, fn) {
+      ipcMain.handle(channel, async (...args) => {
+        try {
+          return { ok: true, value: await fn(...args) };
+        } catch (err) {
+          logger.write('error', `ipc ${channel}: ${(err && err.stack) || err}`);
+          return { ok: false, error: { message: String((err && err.message) || err), code: (err && err.code) || null } };
+        }
+      });
+    },
+  };
+}
+
 // ---------------------------------------------------------------- wiring
 function register({ app, ipcMain, dialog, screen, win, dataDir, logger }) {
   const outbox = createOutbox(path.join(dataDir, 'outbox', 'bug-reports'));
@@ -161,6 +181,6 @@ function captureLogs({ app, win, logger }) {
 }
 
 module.exports = {
-  redact, createLogger, createOutbox, deviceInfo, register, captureLogs,
+  redact, createLogger, createOutbox, deviceInfo, register, captureLogs, wrapIpc,
   MAX_FILE_BYTES, MAX_FILES, LOG_TAIL_BYTES,
 };

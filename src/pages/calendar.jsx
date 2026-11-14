@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
 import { DayTimeline } from '../timeline.jsx';
-import { Modal, Field, useDirtyGuard, StatusPill, fmtTime, fmtDate, fullName, toDateInput, toTimeInput, combineDateTime, Avatar, statusLabel } from '../components.jsx';
+import { Modal, Field, useDirtyGuard, StatusPill, fmtTime, fmtDate, fullName, toDateInput, toTimeInput, combineDateTime, Avatar, statusLabel, AsyncButton } from '../components.jsx';
 import { appointmentRepo, patientRepo, userRepo, visitRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -83,11 +83,11 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
     <Modal title={appt ? t('Edit appointment') : t('New appointment')} onClose={guard.requestClose}
       footer={<>
         <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
-        <button className={conflicts.length ? 'btn-danger' : 'btn-primary'} onClick={save}
+        <AsyncButton className={conflicts.length ? 'btn-danger' : 'btn-primary'} onClick={save}
                 disabled={!form.patient_id || !form.assigned_user_id || !validRange}>
           <Icon name={conflicts.length ? 'alert-tri' : 'check'} size={13}/>
           {conflicts.length ? t('Book anyway') : t('Save')}
-        </button>
+        </AsyncButton>
       </>}>
       {!patients.length && (
         <div className="auth-error">{t('No patients yet — add one from the Patients page first.')}</div>
@@ -169,7 +169,7 @@ const CancelModal = ({ appt, onClose }) => {
     <Modal title={t('Cancel — {name}', { name: `${appt.first_name} ${appt.last_name}` })} onClose={guard.requestClose}
       footer={<>
         <button className="btn-ghost" onClick={guard.requestClose}>{t('Keep appointment')}</button>
-        <button className="btn-danger" onClick={confirm}><Icon name="x" size={13}/>{t('Confirm cancellation')}</button>
+        <AsyncButton className="btn-danger" onClick={confirm}><Icon name="x" size={13}/>{t('Confirm cancellation')}</AsyncButton>
       </>}>
       <Field label={t('Reason')}>
         <select value={reason} onChange={(e) => setReason(e.target.value)}>
@@ -213,10 +213,10 @@ const ApptActions = ({ appt, onClose, onEdit, onCancel, onVisit }) => {
         {active && <button className="btn-ghost" onClick={() => onEdit(appt)}><Icon name="calendar" size={13}/>{t('Edit')}</button>}
         {active && <button className="btn-danger" onClick={() => onCancel(appt)}>{t('Cancel / reschedule')}</button>}
         {active && (
-          <button className="btn-primary" onClick={async () => {
+          <AsyncButton className="btn-primary" onClick={async () => {
             const v = await appointmentRepo.checkIn(appt, localUser.id);
             onVisit(v, `${appt.first_name} ${appt.last_name}`);
-          }}><Icon name="check" size={13}/>{t('Check in')}</button>
+          }}><Icon name="check" size={13}/>{t('Check in')}</AsyncButton>
         )}
         {visit && (
           <button className="btn-primary" onClick={() => onVisit(visit, `${appt.first_name} ${appt.last_name}`)}>

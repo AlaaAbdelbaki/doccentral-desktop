@@ -52,9 +52,10 @@ const Option = ({ id, checked, onChange, title, hint, preview }) => {
   );
 };
 
-export const ReportProblemModal = ({ screenshot, onClose }) => {
+// initialDescription: pre-filled text (the error screen passes the error + stack).
+export const ReportProblemModal = ({ screenshot, initialDescription = '', onClose }) => {
   const { session, clinic } = useAuth();
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(() => initialDescription.slice(0, LIMITS.description));
   const [files, setFiles] = useState([]);
   const [withShot, setWithShot] = useState(false);
   const [includeDevice, setIncludeDevice] = useState(false);
@@ -74,7 +75,7 @@ export const ReportProblemModal = ({ screenshot, onClose }) => {
     return onSyncState(setSync);
   }, []);
 
-  const guard = useDirtyGuard({ description: '', files: 0 }, { description: description.trim(), files: files.length }, onClose);
+  const guard = useDirtyGuard({ description: initialDescription.slice(0, LIMITS.description).trim(), files: 0 }, { description: description.trim(), files: files.length }, onClose);
 
   const shotUrl = useMemo(() => (screenshot ? blobUrl(screenshot, 'image/png') : null), [screenshot]);
   useEffect(() => () => shotUrl && URL.revokeObjectURL(shotUrl), [shotUrl]);

@@ -12,6 +12,9 @@ export default {
   Offline: 'Hors ligne', Local: 'Local', Search: 'Rechercher',
 
   // ---- shared
+  'Something went wrong': 'Une erreur est survenue', Dismiss: 'Fermer', Reload: 'Recharger', 'Back to Home': "Retour à l'accueil",
+  'This screen hit an unexpected error. Your saved data is safe. Reload the app, or send us a report so we can fix it.': "Cet écran a rencontré une erreur inattendue. Vos données enregistrées sont en sécurité. Rechargez l'application ou envoyez-nous un signalement pour que nous puissions corriger le problème.",
+  'The app showed "Something went wrong".': "L'application a affiché « Une erreur est survenue ».",
   'Discard changes?': 'Abandonner les modifications ?', 'Keep editing': 'Continuer la saisie', Discard: 'Abandonner',
   'What you typed in this form will be lost.': 'Ce que vous avez saisi dans ce formulaire sera perdu.', 'Saving…': 'Enregistrement…',
   DT: 'DT', All: 'Tous', 'All →': 'Tout voir →', Cancel: 'Annuler', Save: 'Enregistrer', Saved: 'Enregistré',

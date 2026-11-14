@@ -13,6 +13,9 @@ export default {
   Offline: 'غير متصل', Local: 'محلي', Search: 'بحث',
 
   // ---- shared
+  'Something went wrong': 'حدث خطأ ما', Dismiss: 'إغلاق', Reload: 'إعادة التحميل', 'Back to Home': 'العودة إلى الرئيسية',
+  'This screen hit an unexpected error. Your saved data is safe. Reload the app, or send us a report so we can fix it.': 'واجهت هذه الشاشة خطأً غير متوقع. بياناتك المحفوظة في أمان. أعد تحميل التطبيق أو أرسل لنا بلاغًا لنتمكن من إصلاحه.',
+  'The app showed "Something went wrong".': 'عرض التطبيق رسالة «حدث خطأ ما».',
   'Discard changes?': 'تجاهل التغييرات؟', 'Keep editing': 'متابعة التعديل', Discard: 'تجاهل',
   'What you typed in this form will be lost.': 'ستفقد ما كتبته في هذا النموذج.', 'Saving…': 'جارٍ الحفظ…',
   DT: 'د.ت', All: 'الكل', 'All →': 'عرض الكل ←', Cancel: 'إلغاء', Save: 'حفظ', Saved: 'تم الحفظ',

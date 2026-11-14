@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
-import { Modal, Field, EmptyState, useDirtyGuard } from '../components.jsx';
+import { Modal, Field, EmptyState, useDirtyGuard, AsyncButton } from '../components.jsx';
 import { inventoryRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -35,7 +35,7 @@ const ItemFormModal = ({ item, onClose }) => {
     <Modal title={item ? t('Edit item') : t('New inventory item')} onClose={guard.requestClose}
       footer={<>
         <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
-        <button className="btn-primary" disabled={!form.name} onClick={save}><Icon name="check" size={13}/>{t('Save')}</button>
+        <AsyncButton className="btn-primary" disabled={!form.name} onClick={save}><Icon name="check" size={13}/>{t('Save')}</AsyncButton>
       </>}>
       <Field label={t('Name')}><input value={form.name} onChange={set('name')} placeholder={t('e.g. Cotton rolls')}/></Field>
       <div className="form-row">
@@ -148,10 +148,10 @@ const RestockModal = ({ item, userId, onClose }) => {
     <Modal title={t('Restock — {item}', { item: item.name })} onClose={guard.requestClose}
       footer={<>
         <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
-        <button className="btn-primary" disabled={!Number(qty)} onClick={async () => {
+        <AsyncButton className="btn-primary" disabled={!Number(qty)} onClick={async () => {
           await inventoryRepo.restock(item, Number(qty), supplier, notes, userId);
           onClose();
-        }}><Icon name="check" size={13}/>{t('Record restock')}</button>
+        }}><Icon name="check" size={13}/>{t('Record restock')}</AsyncButton>
       </>}>
       <div className="form-row">
         <Field label={t('Quantity added ({unit})', { unit: item.unit })}><input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)}/></Field>
@@ -172,10 +172,10 @@ const AdjustModal = ({ item, userId, onClose }) => {
     <Modal title={t('Adjust stock — {item}', { item: item.name })} onClose={guard.requestClose}
       footer={<>
         <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
-        <button className="btn-primary" disabled={!reason || qty === ''} onClick={async () => {
+        <AsyncButton className="btn-primary" disabled={!reason || qty === ''} onClick={async () => {
           await inventoryRepo.adjust(item, Number(qty), reason, userId);
           onClose();
-        }}><Icon name="check" size={13}/>{t('Apply adjustment')}</button>
+        }}><Icon name="check" size={13}/>{t('Apply adjustment')}</AsyncButton>
       </>}>
       <Field label={t('New on-hand quantity ({unit})', { unit: item.unit })}><input type="number" min="0" value={qty} onChange={(e) => setQty(e.target.value)}/></Field>
       <Field label={t('Reason (required)')}><input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('e.g. Physical count correction, expired batch')}/></Field>

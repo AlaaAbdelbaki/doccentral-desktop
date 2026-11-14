@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { redact, createLogger, createOutbox } = require('../../support');
+const { redact, createLogger, createOutbox, wrapIpc } = require('../../support');
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'dc-support-'));
 
@@ -67,4 +67,20 @@ test('an unreadable queued report is skipped, not fatal', () => {
   const dir = tmp();
   fs.writeFileSync(path.join(dir, '550e8400-e29b-41d4-a716-446655440001.json'), '{broken');
   assert.deepEqual(createOutbox(dir).list(), []);
+});
+
+test('IPC failures are logged and returned as data, successes pass through', async () => {
+  const handlers = {};
+  const logged = [];
+  const ipc = wrapIpc({ handle: (ch, fn) => { handlers[ch] = fn; } }, { write: (lvl, msg) => logged.push([lvl, msg]) });
+  ipc.handle('ok', (_e, a, b) => a + b);
+  ipc.handle('async-ok', async () => undefined);
+  ipc.handle('boom', () => { const e = new Error('no such table: x'); e.code = 'SQLITE_ERROR'; throw e; });
+
+  assert.deepEqual(await handlers.ok({}, 2, 3), { ok: true, value: 5 });
+  assert.deepEqual(await handlers['async-ok']({}), { ok: true, value: undefined });
+  assert.deepEqual(await handlers.boom({}), { ok: false, error: { message: 'no such table: x', code: 'SQLITE_ERROR' } });
+  assert.equal(logged.length, 1);
+  assert.equal(logged[0][0], 'error');
+  assert.match(logged[0][1], /^ipc boom: Error: no such table: x/);
 });
