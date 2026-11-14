@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
-import { Modal, Field, money, fmtDate, fmtDateTime, age, fullName, Avatar, StatusPill, EmptyState, toDateInput } from '../components.jsx';
+import { Modal, Field, useDirtyGuard, money, fmtDate, fmtDateTime, age, fullName, Avatar, StatusPill, EmptyState, toDateInput } from '../components.jsx';
 import { patientRepo, planRepo, visitRepo, invoiceRepo, attachmentRepo, appointmentRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -12,12 +12,14 @@ import { t } from '../lib/i18n.jsx';
 const ageLabel = (dob) => t('{n} yrs', { n: age(dob) });
 
 const PatientFormModal = ({ patient, onClose }) => {
-  const [form, setForm] = useState({
+  const [init] = useState(() => ({
     first_name: patient?.first_name || '', last_name: patient?.last_name || '',
     date_of_birth: patient ? toDateInput(patient.date_of_birth) : '',
     phone: patient?.phone || '', email: patient?.email || '',
     history_notes: patient?.history_notes || '',
-  });
+  }));
+  const [form, setForm] = useState(init);
+  const guard = useDirtyGuard(init, form, onClose);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const save = async () => {
     const fields = { ...form, email: form.email || null, history_notes: form.history_notes || null };
@@ -27,9 +29,9 @@ const PatientFormModal = ({ patient, onClose }) => {
   };
   const valid = form.first_name && form.last_name && form.date_of_birth && form.phone;
   return (
-    <Modal title={patient ? t('Edit patient') : t('Add patient')} onClose={onClose}
+    <Modal title={patient ? t('Edit patient') : t('Add patient')} onClose={guard.requestClose}
       footer={<>
-        <button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button>
+        <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
         <button className="btn-primary" disabled={!valid} onClick={save}><Icon name="check" size={13}/>{t('Save')}</button>
       </>}>
       <div className="form-row">
@@ -45,12 +47,15 @@ const PatientFormModal = ({ patient, onClose }) => {
         <textarea value={form.history_notes} onChange={set('history_notes')}
           placeholder={t('Allergies, prior treatments, paper folder summary…')}/>
       </Field>
+      {guard.prompt}
     </Modal>
   );
 };
 
 const PlanFormModal = ({ patient, presetTooth, onClose, onSaved }) => {
-  const [form, setForm] = useState({ name: '', tooth: presetTooth || '', price: '', date: '' });
+  const [init] = useState(() => ({ name: '', tooth: presetTooth || '', price: '', date: '' }));
+  const [form, setForm] = useState(init);
+  const guard = useDirtyGuard(init, form, onClose);
   const [error, setError] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const save = async () => {
@@ -67,9 +72,9 @@ const PlanFormModal = ({ patient, presetTooth, onClose, onSaved }) => {
     }
   };
   return (
-    <Modal title={t('Add planned treatment — {name}', { name: fullName(patient) })} onClose={onClose}
+    <Modal title={t('Add planned treatment — {name}', { name: fullName(patient) })} onClose={guard.requestClose}
       footer={<>
-        <button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button>
+        <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
         <button className="btn-primary" disabled={!form.name.trim()} onClick={save}><Icon name="check" size={13}/>{t('Add to plan')}</button>
       </>}>
       {error && <div className="auth-error">{error}</div>}
@@ -83,6 +88,7 @@ const PlanFormModal = ({ patient, presetTooth, onClose, onSaved }) => {
       <Field label={t('Target date (optional — leave empty for next available)')}>
         <input type="date" value={form.date} onChange={set('date')}/>
       </Field>
+      {guard.prompt}
     </Modal>
   );
 };
@@ -316,7 +322,7 @@ const OverviewTab = ({ patient, currency, onEdit, onDelete }) => {
         </div>
       </div>
       {preview && (
-        <Modal wide title={preview.file_name} onClose={() => setPreview(null)}
+        <Modal wide closeOnBackdrop title={preview.file_name} onClose={() => setPreview(null)}
           footer={<button className="btn-ghost" onClick={() => window.dc.files.open(preview.storage_path)}>{t('Open in system viewer')}</button>}>
           <img className="attach-preview" src={preview.dataUrl} alt={preview.file_name}/>
         </Modal>

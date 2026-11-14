@@ -4,7 +4,7 @@
 // on this computer and sent later when that isn't possible.
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from './icons.jsx';
-import { Modal, Field } from './components.jsx';
+import { Modal, Field, useDirtyGuard } from './components.jsx';
 import { t, lang } from './lib/i18n.jsx';
 import { useAuth } from './lib/auth.jsx';
 import { onSyncState } from './lib/sync.js';
@@ -74,6 +74,8 @@ export const ReportProblemModal = ({ screenshot, onClose }) => {
     return onSyncState(setSync);
   }, []);
 
+  const guard = useDirtyGuard({ description: '', files: 0 }, { description: description.trim(), files: files.length }, onClose);
+
   const shotUrl = useMemo(() => (screenshot ? blobUrl(screenshot, 'image/png') : null), [screenshot]);
   useEffect(() => () => shotUrl && URL.revokeObjectURL(shotUrl), [shotUrl]);
 
@@ -133,10 +135,10 @@ export const ReportProblemModal = ({ screenshot, onClose }) => {
   }
 
   return (
-    <Modal title={t('Report a problem')} onClose={onClose} wide
+    <Modal title={t('Report a problem')} onClose={guard.requestClose} wide
            footer={<>
              <span className="report-foot-note"><Icon name="shield" size={13}/>{t('Your patient records are never included.')}</span>
-             <button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button>
+             <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
              <button className="btn-primary" disabled={sending} onClick={send}>
                <Icon name="check" size={13}/>{sending ? t('Sending…') : t('Send report')}
              </button>
@@ -195,6 +197,7 @@ export const ReportProblemModal = ({ screenshot, onClose }) => {
 
         {error && <div className="auth-error">{error}</div>}
       </div>
+      {guard.prompt}
     </Modal>
   );
 };

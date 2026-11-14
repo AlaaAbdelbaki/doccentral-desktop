@@ -1,8 +1,8 @@
 // Visit workflow modal (Epic 5): checked_in → in_progress → completed,
 // performed treatments, clinical notes, auto-generated draft invoice on completion.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from './icons.jsx';
-import { Modal, Field, money, fmtDateTime, StatusPill, statusLabel } from './components.jsx';
+import { Modal, Field, useDirtyGuard, money, fmtDateTime, StatusPill, statusLabel } from './components.jsx';
 import { visitRepo, planRepo, invoiceRepo } from './lib/repos.js';
 import { useAuth } from './lib/auth.jsx';
 import { t } from './lib/i18n.jsx';
@@ -15,7 +15,8 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
   const [invoice, setInvoice] = useState(null);
   const [diag, setDiag] = useState(initial.diagnosis || '');
   const [notes, setNotes] = useState(initial.clinical_notes || '');
-  const [row, setRow] = useState({ tooth: '', name: '', price: '', qty: 1 });
+  const EMPTY_ROW = { tooth: '', name: '', price: '', qty: 1 };
+  const [row, setRow] = useState(EMPTY_ROW);
 
   const reload = async () => {
     const v = await visitRepo.byId(initial.id);
@@ -36,11 +37,38 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
       unit_price: Number(row.price), quantity: Number(row.qty) || 1,
       recorded_by_user_id: localUser.id,
     });
-    setRow({ tooth: '', name: '', price: '', qty: 1 });
+    setRow(EMPTY_ROW);
     reload();
   };
 
-  const saveNotes = () => visitRepo.saveNotes(visit.id, diag, notes);
+  // Autosave diagnosis + notes 800 ms after typing stops, and on close, so
+  // clinical notes are never lost. Saves run one after another (queue).
+  const [saveState, setSaveState] = useState(null); // null | 'saving' | 'saved'
+  const latest = useRef({ diag, notes });
+  latest.current = { diag, notes };
+  const saved = useRef({ diag, notes });
+  const queue = useRef(Promise.resolve());
+  const saveNotes = () => {
+    queue.current = queue.current.then(async () => {
+      const cur = latest.current;
+      if (cur.diag === saved.current.diag && cur.notes === saved.current.notes) return;
+      setSaveState('saving');
+      await visitRepo.saveNotes(initial.id, cur.diag, cur.notes);
+      saved.current = cur;
+      setSaveState('saved');
+    });
+    return queue.current;
+  };
+  useEffect(() => {
+    const timer = setTimeout(saveNotes, 800);
+    return () => clearTimeout(timer);
+  }, [diag, notes]);
+  // Leaving the page with the modal open still saves.
+  useEffect(() => () => { saveNotes(); }, []);
+
+  // A half-typed treatment row is not saved by autosave: ask before dropping it.
+  const guard = useDirtyGuard(EMPTY_ROW, row, onClose);
+  const close = async () => { await saveNotes(); guard.requestClose(); };
 
   const complete = async () => {
     await saveNotes();
@@ -50,7 +78,7 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
   };
 
   return (
-    <Modal wide title={<span>{t('Visit — {name}', { name: patientName })} <span style={{ marginInlineStart: 8 }}><StatusPill status={visit.status}/></span></span>} onClose={onClose}
+    <Modal wide title={<span>{t('Visit — {name}', { name: patientName })} <span style={{ marginInlineStart: 8 }}><StatusPill status={visit.status}/></span></span>} onClose={close}
       footer={
         <>
           {visit.status === 'checked_in' && (
@@ -66,7 +94,7 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
              {t('Unlock visit')}
             </button>
           )}
-          {!locked && <button className="btn-ghost" onClick={async () => { await saveNotes(); onClose(); }}>{t('Save & close')}</button>}
+          {!locked && <button className="btn-ghost" onClick={close}>{t('Save & close')}</button>}
           {locked && <button className="btn-ghost" onClick={onClose}>{t('Close')}</button>}
         </>
       }>
@@ -80,6 +108,11 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
         <Field label={t('Diagnosis')}><input disabled={locked} value={diag} onChange={(e) => setDiag(e.target.value)} placeholder={t('e.g. Irreversible pulpitis #30')}/></Field>
         <Field label={t('Clinical notes')}><input disabled={locked} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('Dictated note…')}/></Field>
       </div>
+      {!locked && saveState && (
+        <div className="autosave-state" role="status" style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: -6 }}>
+          {saveState === 'saving' ? t('Saving…') : <><Icon name="check" size={11}/> {t('Saved')}</>}
+        </div>
+      )}
 
       <div className="card table-card">
         <div className="card-head"><span className="card-title">{t('Performed treatments')}</span>
@@ -130,6 +163,7 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
           ))}
         </div>
       )}
+      {guard.prompt}
     </Modal>
   );
 };

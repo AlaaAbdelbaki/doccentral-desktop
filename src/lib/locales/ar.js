@@ -13,6 +13,8 @@ export default {
   Offline: 'غير متصل', Local: 'محلي', Search: 'بحث',
 
   // ---- shared
+  'Discard changes?': 'تجاهل التغييرات؟', 'Keep editing': 'متابعة التعديل', Discard: 'تجاهل',
+  'What you typed in this form will be lost.': 'ستفقد ما كتبته في هذا النموذج.', 'Saving…': 'جارٍ الحفظ…',
   DT: 'د.ت', All: 'الكل', 'All →': 'عرض الكل ←', Cancel: 'إلغاء', Save: 'حفظ', Saved: 'تم الحفظ',
   'Save changes': 'حفظ التغييرات', Edit: 'تعديل', Delete: 'حذف', Close: 'إغلاق',
   Add: 'إضافة', Keep: 'إبقاء', Record: 'تسجيل', Switch: 'اختيار',
