@@ -80,8 +80,12 @@ t('{n} appointments', { n })           // placeholders: translate whole sentence
 
 Dates, times and amounts follow the chosen language (`locale()`); Arabic
 switches the layout to right-to-left (CSS uses logical properties such as
-`margin-inline-start`, so new styles should too). The language can be changed
-in Settings or on the sign-in screen.
+`margin-inline-start`, so new styles should too).
+
+**Default language:** the PC's Windows display language if it's French or
+Arabic, otherwise English. A language picked in Settings or on the sign-in
+screen is remembered and wins; *Settings → Language → Same as this computer*
+goes back to following Windows.
 
 When adding UI text: wrap it in `t()`, add the key to both locale files, then
 run `node scripts/i18n-audit.mjs` — it lists any text that bypasses `t()` and

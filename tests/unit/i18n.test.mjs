@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { audit } from '../../scripts/i18n-audit.mjs';
 import fr from '../../src/lib/locales/fr.js';
 import ar from '../../src/lib/locales/ar.js';
-import { t, setCurrentLang } from '../../src/lib/translate.js';
+import { t, setCurrentLang, detectLanguage, initialLanguage } from '../../src/lib/translate.js';
 
 const { untranslated, keys } = audit();
 const used = [...keys.keys()];
@@ -48,4 +48,26 @@ test('t() translates, fills placeholders, and falls back to English', () => {
   assert.equal(t('Dr. {name}', { name: 'Ben Ammar' }), 'د. Ben Ammar');
   setCurrentLang('en');
   assert.equal(t('Save'), 'Save');
+});
+
+test('default language follows the PC: first supported preferred language', () => {
+  assert.equal(detectLanguage(['ar-TN']), 'ar');
+  assert.equal(detectLanguage(['fr-FR', 'en-US']), 'fr');
+  assert.equal(detectLanguage(['fr-CA']), 'fr');             // regional variants
+  assert.equal(detectLanguage(['de-DE', 'ar-SA', 'fr-FR']), 'ar'); // order of preference
+  assert.equal(detectLanguage(['en-US', 'fr-FR']), 'en');
+  assert.equal(detectLanguage(['AR_tn']), 'ar');              // case / underscore
+});
+
+test('falls back to English when no preferred language is supported', () => {
+  assert.equal(detectLanguage(['de-DE', 'it-IT']), 'en');
+  assert.equal(detectLanguage([]), 'en');
+  assert.equal(detectLanguage([undefined, '']), 'en');
+});
+
+test("a language the user picked wins over the PC's language", () => {
+  assert.equal(initialLanguage('fr', ['ar-TN']), 'fr');
+  assert.equal(initialLanguage(null, ['ar-TN']), 'ar');
+  assert.equal(initialLanguage('xx', ['fr-FR']), 'fr');        // unknown stored value ignored
+  assert.equal(initialLanguage(null, ['de-DE']), 'en');
 });

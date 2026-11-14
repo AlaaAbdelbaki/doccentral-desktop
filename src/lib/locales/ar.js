@@ -18,7 +18,7 @@ export default {
   Add: 'إضافة', Keep: 'إبقاء', Record: 'تسجيل', Switch: 'اختيار',
   Status: 'الحالة', Notes: 'ملاحظات', Reason: 'السبب', Date: 'التاريخ', Start: 'البداية', End: 'النهاية',
   Name: 'الاسم', Description: 'الوصف', Amount: 'المبلغ', Total: 'المجموع', Due: 'المتبقي',
-  Time: 'الوقت', optional: 'اختياري', Active: 'نشط', Enabled: 'مفعّل', Default: 'افتراضي',
+  Time: 'الوقت', optional: 'اختياري', Active: 'نشط', Enabled: 'مفعّل',
 
   // ---- statuses
   Scheduled: 'مجدول', 'Checked in': 'حاضر', Completed: 'مكتمل', Cancelled: 'ملغى',
@@ -200,7 +200,10 @@ export default {
   'Email (sign-in)': 'البريد الإلكتروني (لتسجيل الدخول)', 'Your name appears in the sidebar, on visits, and on recorded payments.':
     'يظهر اسمك في الشريط الجانبي وفي الزيارات والدفعات المسجلة.',
   'Language & formats': 'اللغة والتنسيقات', 'Primary clinic language': 'اللغة الرئيسية للعيادة',
-  'Right-to-left layout': 'عرض من اليمين إلى اليسار', 'Add staff': 'إضافة موظف', 'Add staff user': 'إضافة موظف',
+  'Right-to-left layout': 'عرض من اليمين إلى اليسار',
+  'Same as this computer': 'لغة هذا الحاسوب',
+  'Follows the Windows language — currently {language}.': 'تتبع لغة ويندوز — حاليًا {language}.',
+  "Used when the computer's language isn't supported": 'تُستخدم عندما تكون لغة الحاسوب غير مدعومة', 'Add staff': 'إضافة موظف', 'Add staff user': 'إضافة موظف',
   'Create user': 'إنشاء المستخدم', 'Initial password': 'كلمة المرور الأولية',
   Sync: 'المزامنة', 'Supabase account': 'حساب Supabase', 'Not signed in': 'غير مسجّل الدخول', 'Sync now': 'مزامنة الآن',
   'All local changes synced · {time}.': 'تمت مزامنة جميع التغييرات المحلية · {time}.',

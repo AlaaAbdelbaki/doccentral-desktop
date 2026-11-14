@@ -5,7 +5,10 @@ import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar, SyncPill } from '../shell.jsx';
 import { Modal, Field, initialsOf, roleLabel, roleName, fmtTime } from '../components.jsx';
 import { useAuth } from '../lib/auth.jsx';
-import { useLang, t } from '../lib/i18n.jsx';
+import { useLang, t, systemLanguage } from '../lib/i18n.jsx';
+
+// Each language in its own name (not translated).
+const LANGUAGE_NAMES = { en: 'English', fr: 'Français', ar: 'العربية' };
 import { userRepo, clinicRepo } from '../lib/repos.js';
 import { seedDemoData } from '../lib/seed.js';
 import { syncNow, onSyncState, MIGRATION_SQL } from '../lib/sync.js';
@@ -80,7 +83,7 @@ const ProfileSection = () => {
 
 export const SettingsPage = ({ onNavigate, badges, params }) => {
   const { clinic, localUser, session, signOut, refreshClinic } = useAuth();
-  const { lang, setLang } = useLang();
+  const { lang, explicit, setLang } = useLang();
   const [section, setSection] = useState(params?.section || 'clinic');
   const [sync, setSync] = useState({ status: 'idle', pending: 0, errors: [] });
   const [copied, setCopied] = useState(false);
@@ -154,12 +157,21 @@ export const SettingsPage = ({ onNavigate, badges, params }) => {
                 <div className="card">
                   <div className="card-head"><span className="card-title">{t('Language & formats')}</span></div>
                   <div className="card-body tight" style={{ padding: '0 16px' }}>
-                    {[['en', 'English'], ['fr', 'Français'], ['ar', 'العربية']].map(([code, label]) => (
+                    <div className="setting-row">
+                      <div><div className="sr-label">{t('Same as this computer')}</div>
+                        <div className="sr-desc">{t('Follows the Windows language — currently {language}.', { language: LANGUAGE_NAMES[systemLanguage()] })}</div></div>
+                      <div className="sr-control">
+                        {!explicit
+                          ? <span className="pill blue">{t('Active')}</span>
+                          : <button className="btn-ghost" onClick={() => setLang(null)}>{t('Switch')}</button>}
+                      </div>
+                    </div>
+                    {Object.entries(LANGUAGE_NAMES).map(([code, label]) => (
                       <div key={code} className="setting-row">
                         <div><div className="sr-label">{label}</div>
-                          <div className="sr-desc">{code === 'fr' ? t('Primary clinic language') : code === 'ar' ? t('Right-to-left layout') : t('Default')}</div></div>
+                          <div className="sr-desc">{code === 'fr' ? t('Primary clinic language') : code === 'ar' ? t('Right-to-left layout') : t("Used when the computer's language isn't supported")}</div></div>
                         <div className="sr-control">
-                          {lang === code
+                          {explicit && lang === code
                             ? <span className="pill blue">{t('Active')}</span>
                             : <button className="btn-ghost" onClick={() => setLang(code)}>{t('Switch')}</button>}
                         </div>

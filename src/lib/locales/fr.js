@@ -17,7 +17,7 @@ export default {
   Add: 'Ajouter', Keep: 'Conserver', Record: 'Enregistrer', Switch: 'Choisir',
   Status: 'Statut', Notes: 'Notes', Reason: 'Motif', Date: 'Date', Start: 'Début', End: 'Fin',
   Name: 'Nom', Description: 'Description', Amount: 'Montant', Total: 'Total', Due: 'Reste dû',
-  Time: 'Heure', optional: 'facultatif', Active: 'Actif', Enabled: 'Activé', Default: 'Par défaut',
+  Time: 'Heure', optional: 'facultatif', Active: 'Actif', Enabled: 'Activé',
 
   // ---- statuses
   Scheduled: 'Planifié', 'Checked in': 'Arrivé', Completed: 'Terminé', Cancelled: 'Annulé',
@@ -199,7 +199,10 @@ export default {
   'Email (sign-in)': 'E-mail (connexion)', 'Your name appears in the sidebar, on visits, and on recorded payments.':
     'Votre nom apparaît dans la barre latérale, sur les visites et sur les paiements enregistrés.',
   'Language & formats': 'Langue et formats', 'Primary clinic language': 'Langue principale du cabinet',
-  'Right-to-left layout': 'Affichage de droite à gauche', 'Add staff': 'Ajouter du personnel', 'Add staff user': 'Ajouter un membre du personnel',
+  'Right-to-left layout': 'Affichage de droite à gauche',
+  'Same as this computer': 'Comme cet ordinateur',
+  'Follows the Windows language — currently {language}.': 'Suit la langue de Windows — actuellement {language}.',
+  "Used when the computer's language isn't supported": "Utilisée quand la langue de l'ordinateur n'est pas prise en charge", 'Add staff': 'Ajouter du personnel', 'Add staff user': 'Ajouter un membre du personnel',
   'Create user': "Créer l'utilisateur", 'Initial password': 'Mot de passe initial',
   Sync: 'Synchronisation', 'Supabase account': 'Compte Supabase', 'Not signed in': 'Non connecté', 'Sync now': 'Synchroniser',
   'All local changes synced · {time}.': 'Toutes les modifications locales sont synchronisées · {time}.',
