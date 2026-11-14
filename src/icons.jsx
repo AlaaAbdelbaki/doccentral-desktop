@@ -38,6 +38,10 @@ export const Icon = ({ name, size = 16, className = '', style = {} }) => {
     case 'dollar': return (<svg {...common}><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>);
     case 'pill': return (<svg {...common}><path d="M10.5 20.5a4.95 4.95 0 1 1-7-7l10-10a4.95 4.95 0 0 1 7 7z"/><path d="m8.5 8.5 7 7"/></svg>);
     case 'clock': return (<svg {...common}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>);
+    case 'bug': return (<svg {...common}><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M19 7l-3 2M5 7l3 2M19 19l-3-2M5 19l3-2M20 13h-4M4 13h4M10 4l1 2M14 4l-1 2M12 10v10"/></svg>);
+    case 'paperclip': return (<svg {...common}><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>);
+    case 'camera': return (<svg {...common}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>);
+    case 'shield': return (<svg {...common}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>);
     case 'x': return (<svg {...common}><path d="M18 6 6 18M6 6l12 12"/></svg>);
     case 'arrow-up': return (<svg {...common}><path d="M12 19V5M5 12l7-7 7 7"/></svg>);
     case 'arrow-down': return (<svg {...common}><path d="M12 5v14M19 12l-7 7-7-7"/></svg>);

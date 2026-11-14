@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const db = require('./db');
+const support = require('./support');
 
 // Dev / self-check flags (DOC_DEV_AUTOLOGIN, DOC_SCRIPT, DOC_DATA_DIR, …) only
 // work when running from source. In an installed build they are ignored:
@@ -21,7 +22,10 @@ const attachmentsDir = () => {
   return dir;
 };
 
+let logger = null;
+
 function registerIpc(win) {
+  support.register({ app, ipcMain, dialog, screen, win, dataDir: app.getPath('userData'), logger });
   ipcMain.handle('db:all', (_e, sql, params) => db.all(sql, params || []));
   ipcMain.handle('db:get', (_e, sql, params) => db.get(sql, params || []));
   ipcMain.handle('db:run', (_e, sql, params) => db.run(sql, params || []));
@@ -71,6 +75,7 @@ function registerIpc(win) {
     testLogin: devEnv.DOC_TEST_LOGIN || null,
     initialPage: devEnv.DOC_PAGE || null,
     userData: app.getPath('userData'),
+    version: app.getVersion(),
   }));
 }
 
@@ -78,6 +83,7 @@ function registerIpc(win) {
 // recorded since the backup (or know that the data was lost).
 function warnIfRecovered(win) {
   const r = db.lastRecovery();
+  if (r) logger.write('error', `database recovered: ${r.kind}${r.backup ? ` from ${r.backup}` : ''}`);
   if (!r || devEnv.DOC_SCREENSHOT) return;
   const detail = r.kind === 'restored'
     ? `The local database was damaged and has been restored from the backup "${r.backup}". `
@@ -109,6 +115,7 @@ const createWindow = () => {
   });
   win.setMenuBarVisibility(false);
   registerIpc(win);
+  support.captureLogs({ app, win, logger });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
   warnIfRecovered(win);
 
@@ -147,6 +154,7 @@ app.whenReady().then(async () => {
   const dataDir = devEnv.DOC_DATA_DIR || app.getPath('userData');
   fs.mkdirSync(dataDir, { recursive: true });
   if (devEnv.DOC_DATA_DIR) app.setPath('userData', dataDir);
+  logger = support.createLogger(path.join(dataDir, 'logs'));
   await db.open(dataDir);
   createWindow();
 });

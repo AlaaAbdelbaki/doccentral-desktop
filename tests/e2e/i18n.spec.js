@@ -128,6 +128,8 @@ for (const [lang, label, dir] of [['ar', 'العربية', 'rtl'], ['fr', 'Fran�
       await page.locator('.settings-nav a').nth(i).click();
       await scan(`settings-${i}`);
     }
+    // Report a problem
+    await page.locator('.side-report').click(); await scan('report-problem'); await closeModal();
 
     expect([...offenders].map(([k, v]) => `${k}  ⟶  ${v}`)).toEqual([]);
   });

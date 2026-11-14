@@ -10,6 +10,7 @@ the [README](../README.md).
 - [Cloud access rules (Supabase RLS)](#cloud-access-rules-supabase-rls)
 - [Two-way sync](#two-way-sync)
 - [Languages and right-to-left layout](#languages-and-right-to-left-layout)
+- [Bug reports](#bug-reports)
 - [Testing strategy](#testing-strategy)
 
 ## Overview
@@ -140,6 +141,36 @@ Both files are idempotent and can be re-run safely.
 - `scripts/i18n-audit.mjs` parses the source and lists text that bypasses
   `t()` and keys missing a translation; the unit tests fail on either.
 
+## Bug reports
+
+*Report a problem* (sidebar): `src/report-problem.jsx` (the dialog),
+`src/lib/bugreport-core.js` (build, send, queue; pure),
+`src/lib/bugreport.js` (Supabase adapter) and `support.js` (main process).
+
+- **Privacy by default:** the description is the only required field.
+  Device information, app logs and the screenshot are unticked by default,
+  and each can be previewed exactly as it will be sent.
+- **Device information** is technical only: app, Electron and Windows
+  versions, CPU model and cores, memory, display sizes, locale, database
+  size, backup count and sync status. No computer name, user name, paths,
+  network addresses or serial numbers.
+- **App log** (`userData/logs/doccentral.log`, 1 MB plus one rotated file):
+  renderer warnings and errors, main-process crashes, sync failures and
+  database recovery. Emails, phone numbers, tokens, passwords and the
+  Windows user name are removed *before* anything is written; record ids and
+  timestamps are kept. A report includes at most the last 200 KB.
+- **Screenshot** of the window is taken when the dialog opens, so it shows
+  the screen the problem is about rather than the dialog.
+- **Sending:** attachments (max 5 × 10 MB) are uploaded to the private
+  `bug-reports` bucket under `<auth uid>/<report id>/`, then a row is
+  inserted into `bug_reports`. RLS allows insert only (into your own
+  folder, under your own id, for a clinic you belong to); nothing can be
+  read back through the API. Retrying is idempotent: an "already exists"
+  answer counts as done.
+- **Offline:** if sending fails or nobody is signed in to the cloud, the
+  report is saved in `userData/outbox/bug-reports/` and sent on reconnect
+  and every 5 minutes.
+
 ## Testing strategy
 
 | Layer | Tool | What it proves |
@@ -149,6 +180,7 @@ Both files are idempotent and can be re-run safely.
 | Sync | `node:test` + PGlite | two simulated computers: push, pull, paging, conflicts, soft deletes, staff joining |
 | Access | `node:test` | every `decideAccess` outcome |
 | Translations | `node:test` + audit | no untranslated text, no missing keys, placeholders preserved |
+| Bug reports | `node:test` (+ PGlite) | log scrubbing and rotation, outbox, opt-in contents, retries, insert-only cloud rules |
 | End-to-end | Playwright + Electron | the real app: every page, billing, calendar, inventory, closeout, every screen in Arabic and French, default language — with screenshots and videos |
 
 PGlite runs Postgres in WASM with small stubs for Supabase's roles and

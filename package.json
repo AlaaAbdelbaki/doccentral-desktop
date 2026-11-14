@@ -42,6 +42,7 @@
     "files": [
       "main.js",
       "db.js",
+      "support.js",
       "preload.js",
       "package.json",
       "src/index.html",

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
 import { LangProvider, useLang, t } from './lib/i18n.jsx';
 import { startAutoSync } from './lib/sync.js';
+import { flushReports } from './lib/bugreport.js';
 import { onNavigateRequest } from './lib/nav.js';
 import { onDataChanged } from './lib/dbx.js';
 import { inventoryRepo, patientRepo } from './lib/repos.js';
@@ -40,6 +41,16 @@ const Main = () => {
   useEffect(() => {
     if (!session) return;
     startAutoSync(() => (session.dev ? null : session));
+  }, [session]);
+
+  // Bug reports saved while offline: send them when possible.
+  useEffect(() => {
+    if (!session || session.dev) return;
+    const send = () => flushReports(session);
+    send();
+    const timer = setInterval(send, 5 * 60_000);
+    window.addEventListener('online', send);
+    return () => { clearInterval(timer); window.removeEventListener('online', send); };
   }, [session]);
 
   useEffect(() => {

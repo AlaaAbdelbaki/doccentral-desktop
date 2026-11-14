@@ -223,4 +223,38 @@ export default {
   'Load demo data': 'Charger les données de démonstration', Session: 'Session', 'Signed in as {name}': 'Connecté en tant que {name}',
   'Not signed in — records kept locally': 'Non connecté — données conservées localement',
   '{n} table(s) failed to sync — records kept locally': '{n} table(s) non synchronisée(s) — données conservées localement',
+
+  // Report a problem
+  'Report a problem': 'Signaler un problème',
+  'What happened?': "Que s'est-il passé ?",
+  'What were you doing, what did you expect, and what happened instead?': "Que faisiez-vous, qu'attendiez-vous, et que s'est-il passé à la place ?",
+  'Attachments (optional)': 'Pièces jointes (facultatif)',
+  'Screenshot of the screen': "Capture de l'écran",
+  'Add files': 'Ajouter des fichiers',
+  Remove: 'Retirer',
+  '{n} MB': '{n} Mo',
+  '{n} KB': '{n} Ko',
+  'Screenshots and files may show patient information. Attach only what helps explain the problem.':
+    'Les captures et fichiers peuvent montrer des informations sur les patients. Joignez uniquement ce qui aide à expliquer le problème.',
+  'Help find the cause (optional)': 'Aider à trouver la cause (facultatif)',
+  'Include device information': "Inclure les informations sur l'appareil",
+  'App and Windows version, processor, memory, screens, language and sync status. No computer name, user name or network address.':
+    "Versions de l'application et de Windows, processeur, mémoire, écrans, langue et état de la synchronisation. Ni nom d'ordinateur, ni nom d'utilisateur, ni adresse réseau.",
+  'Include app logs': "Inclure le journal de l'application",
+  'Recent errors and warnings from the app. Email addresses, phone numbers and passwords are removed.':
+    "Erreurs et avertissements récents de l'application. Les adresses e-mail, numéros de téléphone et mots de passe sont retirés.",
+  'Show what will be sent': 'Voir ce qui sera envoyé',
+  'Hide what will be sent': 'Masquer ce qui sera envoyé',
+  'Nothing recorded yet.': "Rien d'enregistré pour l'instant.",
+  'Your patient records are never included.': 'Vos dossiers patients ne sont jamais inclus.',
+  'Send report': 'Envoyer le rapport',
+  'Sending…': 'Envoi…',
+  'Please describe the problem.': 'Veuillez décrire le problème.',
+  'Too large (over {n} MB): {files}': 'Trop volumineux (plus de {n} Mo) : {files}',
+  'You can attach up to {n} files.': "Vous pouvez joindre jusqu'à {n} fichiers.",
+  'Thank you — your report was sent.': 'Merci — votre rapport a été envoyé.',
+  'Reference: {ref}': 'Référence : {ref}',
+  'Report saved on this computer.': 'Rapport enregistré sur cet ordinateur.',
+  "It couldn't be sent right now (offline or not connected to the cloud). It will be sent automatically.":
+    "Il n'a pas pu être envoyé pour l'instant (hors ligne ou non connecté au cloud). Il sera envoyé automatiquement.",
 };

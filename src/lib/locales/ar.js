@@ -224,4 +224,38 @@ export default {
   'Load demo data': 'تحميل البيانات التجريبية', Session: 'الجلسة', 'Signed in as {name}': 'مسجّل الدخول باسم {name}',
   'Not signed in — records kept locally': 'غير مسجّل الدخول — البيانات محفوظة محليًا',
   '{n} table(s) failed to sync — records kept locally': 'تعذّرت مزامنة {n} جدول — البيانات محفوظة محليًا',
+
+  // Report a problem
+  'Report a problem': 'الإبلاغ عن مشكلة',
+  'What happened?': 'ماذا حدث؟',
+  'What were you doing, what did you expect, and what happened instead?': 'ماذا كنت تفعل، وما الذي توقعته، وما الذي حدث بدلًا من ذلك؟',
+  'Attachments (optional)': 'المرفقات (اختياري)',
+  'Screenshot of the screen': 'لقطة من الشاشة',
+  'Add files': 'إضافة ملفات',
+  Remove: 'إزالة',
+  '{n} MB': '{n} ميغابايت',
+  '{n} KB': '{n} كيلوبايت',
+  'Screenshots and files may show patient information. Attach only what helps explain the problem.':
+    'قد تُظهر اللقطات والملفات معلومات عن المرضى. أرفق فقط ما يساعد على توضيح المشكلة.',
+  'Help find the cause (optional)': 'المساعدة في معرفة السبب (اختياري)',
+  'Include device information': 'تضمين معلومات الجهاز',
+  'App and Windows version, processor, memory, screens, language and sync status. No computer name, user name or network address.':
+    'إصدار التطبيق وويندوز، المعالج، الذاكرة، الشاشات، اللغة وحالة المزامنة. بدون اسم الحاسوب أو اسم المستخدم أو عنوان الشبكة.',
+  'Include app logs': 'تضمين سجلّ التطبيق',
+  'Recent errors and warnings from the app. Email addresses, phone numbers and passwords are removed.':
+    'الأخطاء والتحذيرات الأخيرة في التطبيق. تُحذف عناوين البريد الإلكتروني وأرقام الهاتف وكلمات المرور.',
+  'Show what will be sent': 'عرض ما سيُرسل',
+  'Hide what will be sent': 'إخفاء ما سيُرسل',
+  'Nothing recorded yet.': 'لا يوجد شيء مسجّل بعد.',
+  'Your patient records are never included.': 'لا تُرسل ملفات مرضاك أبدًا.',
+  'Send report': 'إرسال التقرير',
+  'Sending…': 'جارٍ الإرسال…',
+  'Please describe the problem.': 'يُرجى وصف المشكلة.',
+  'Too large (over {n} MB): {files}': 'حجم كبير جدًا (أكثر من {n} ميغابايت): {files}',
+  'You can attach up to {n} files.': 'يمكنك إرفاق {n} ملفات كحدّ أقصى.',
+  'Thank you — your report was sent.': 'شكرًا — تم إرسال تقريرك.',
+  'Reference: {ref}': 'المرجع: {ref}',
+  'Report saved on this computer.': 'تم حفظ التقرير على هذا الحاسوب.',
+  "It couldn't be sent right now (offline or not connected to the cloud). It will be sent automatically.":
+    'تعذّر إرساله الآن (دون اتصال أو غير متصل بالسحابة). سيُرسل تلقائيًا.',
 };

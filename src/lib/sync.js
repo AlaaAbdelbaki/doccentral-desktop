@@ -8,10 +8,11 @@ import { createSyncEngine, SYNC_TABLES } from './sync-core.js';
 import { t } from './translate.js';
 import MIGRATION_0001 from '../../supabase/migrations/0001_init_doccentral.sql';
 import MIGRATION_0002 from '../../supabase/migrations/0002_clinic_isolation_and_sync.sql';
+import MIGRATION_0003 from '../../supabase/migrations/0003_bug_reports.sql';
 
 export { SYNC_TABLES };
-// Both scripts are idempotent and safe to run in order on any project.
-export const MIGRATION_SQL = `${MIGRATION_0001}\n\n${MIGRATION_0002}`;
+// All scripts are idempotent and safe to run in order on any project.
+export const MIGRATION_SQL = [MIGRATION_0001, MIGRATION_0002, MIGRATION_0003].join('\n\n');
 
 // PostgREST errors when the cloud schema (or the 0002 upgrade) is missing.
 const isMissingSchema = (msg) => /schema cache|does not exist|server_updated_at|clinic_id/i.test(msg || '');
@@ -57,6 +58,8 @@ async function doSync(session) {
   }
   setState({ status: 'syncing', error: null });
   const { pushed, pulled, errors } = await engine.sync();
+  // Goes to the app log (attachable to a bug report).
+  for (const e of errors) console.warn(`sync: ${e.table}: ${e.message}`);
   if (pulled) { resetClinicCache(); emitDataChanged(); }
   const pending = await pendingCount();
   setState({

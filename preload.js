@@ -16,4 +16,16 @@ contextBridge.exposeInMainWorld('dc', {
     info: () => ipcRenderer.invoke('app:info'),
     openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
   },
+  report: {
+    device: () => ipcRenderer.invoke('report:device'),
+    logs: () => ipcRenderer.invoke('report:logs'),
+    log: (level, message) => ipcRenderer.invoke('report:log', level, message),
+    screenshot: () => ipcRenderer.invoke('report:screenshot'),
+    pickFiles: () => ipcRenderer.invoke('report:pickFiles'),
+    outbox: {
+      put: (report) => ipcRenderer.invoke('report:outboxPut', report),
+      list: () => ipcRenderer.invoke('report:outboxList'),
+      remove: (id) => ipcRenderer.invoke('report:outboxRemove', id),
+    },
+  },
 });
