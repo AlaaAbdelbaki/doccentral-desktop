@@ -1,7 +1,7 @@
 {
   "name": "doccentral-desktop",
   "productName": "DocCentral",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DocCentral desktop — dental clinic management (Electron, offline-first SQLite, Supabase sync)",
   "main": "main.js",
   "private": true,
