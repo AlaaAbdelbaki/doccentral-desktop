@@ -54,6 +54,6 @@ test('week and month views', async ({ page }) => {
   await expect(page.locator('.appt', { hasText: 'Amira Ben Salah' })).toBeVisible();
   await snap(page, 'week-view');
   await page.locator('.seg').getByRole('button', { name: 'Month' }).click();
-  await expect(page.locator('.pill', { hasText: /appts?/ }).first()).toBeVisible();
+  await expect(page.locator('.pill', { hasText: /appointments?/ }).first()).toBeVisible();
   await snap(page, 'month-view');
 });

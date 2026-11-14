@@ -68,6 +68,27 @@ Uninstalling keeps the clinic data in `%APPDATA%\DocCentral`.
   `doccentral.db.corrupt-<timestamp>`, the newest good backup is restored,
   and the user is shown what happened.
 
+## Languages (EN / FR / AR)
+
+All user-facing text goes through `t()` (`src/lib/translate.js`); English is
+the key, French and Arabic live in `src/lib/locales/fr.js` and `ar.js`.
+
+```js
+t('Save')                              // plain text
+t('{n} appointments', { n })           // placeholders: translate whole sentences, never fragments
+```
+
+Dates, times and amounts follow the chosen language (`locale()`); Arabic
+switches the layout to right-to-left (CSS uses logical properties such as
+`margin-inline-start`, so new styles should too). The language can be changed
+in Settings or on the sign-in screen.
+
+When adding UI text: wrap it in `t()`, add the key to both locale files, then
+run `node scripts/i18n-audit.mjs` — it lists any text that bypasses `t()` and
+any key missing a translation. `npm run test:unit` fails on either, and the
+e2e suite opens every screen in Arabic and French and fails on leftover
+English.
+
 ## Tests
 
 ```bash

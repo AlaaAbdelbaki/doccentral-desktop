@@ -28,7 +28,7 @@
   color: var(--ink-500);
   font-weight: 500;
 }
-.section-head .spacer { margin-left: auto; }
+.section-head .spacer { margin-inline-start: auto; }
 
 /* Toolbar / filter row */
 .toolbar {
@@ -95,7 +95,7 @@
 .table-card { overflow: hidden; }
 .dtable { width: 100%; border-collapse: collapse; font-size: 13px; }
 .dtable thead th {
-  text-align: left;
+  text-align: start;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -146,7 +146,7 @@
   min-height: 0;
 }
 .split-list {
-  border-right: 1px solid var(--ink-150);
+  border-inline-end: 1px solid var(--ink-150);
   overflow: auto;
   background: var(--white);
   display: flex;
@@ -166,7 +166,7 @@
 .list-row.active { background: var(--blue-50); box-shadow: inset 3px 0 0 var(--blue-500); }
 .list-row .lr-title { font-weight: 600; font-size: 13.5px; color: var(--ink-900); line-height: 1.25; }
 .list-row .lr-sub { font-size: 12px; color: var(--ink-500); margin-top: 1px; }
-.list-row .lr-meta { margin-left: auto; text-align: right; font-size: 11px; color: var(--ink-400); }
+.list-row .lr-meta { margin-inline-start: auto; text-align: end; font-size: 11px; color: var(--ink-400); }
 
 /* Stat tiles for reports */
 .stat-grid {
@@ -209,7 +209,7 @@
 .donut-legend { display: flex; flex-direction: column; gap: 8px; }
 .donut-legend .dl { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-700); }
 .donut-legend .dl i { width: 11px; height: 11px; border-radius: 3px; }
-.donut-legend .dl b { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--ink-900); }
+.donut-legend .dl b { margin-inline-start: auto; font-variant-numeric: tabular-nums; color: var(--ink-900); }
 
 /* Big odontogram for charting */
 .odontogram {
@@ -269,7 +269,7 @@
 .bubble.them { background: var(--white); border: 1px solid var(--ink-150); border-bottom-left-radius: 4px; align-self: flex-start; color: var(--ink-800); }
 .bubble.me { background: var(--blue-500); color: white; border-bottom-right-radius: 4px; align-self: flex-end; }
 .bubble-time { font-size: 10.5px; color: var(--ink-400); margin-top: 4px; }
-.bubble.me + .bubble-time, .msg-row.me .bubble-time { text-align: right; }
+.bubble.me + .bubble-time, .msg-row.me .bubble-time { text-align: end; }
 .msg-row { display: flex; flex-direction: column; }
 .msg-row.me { align-items: flex-end; }
 .msg-day { text-align: center; font-size: 11px; color: var(--ink-400); font-weight: 500; margin: 6px 0; }
@@ -284,7 +284,7 @@
 .mini-bar.amber i { background: var(--amber-500); }
 .mini-bar.coral i { background: var(--coral-500); }
 
-.timeline-v { position: relative; padding-left: 22px; }
+.timeline-v { position: relative; padding-inline-start: 22px; }
 .timeline-v::before { content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px; background: var(--ink-150); }
 .tl-item { position: relative; padding: 0 0 18px; }
 .tl-item::before { content: ''; position: absolute; left: -21px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--white); border: 2px solid var(--blue-500); }
@@ -319,7 +319,7 @@
 .setting-row:last-child { border-bottom: none; }
 .setting-row .sr-label { font-weight: 600; font-size: 13.5px; color: var(--ink-900); }
 .setting-row .sr-desc { font-size: 12.5px; color: var(--ink-500); margin-top: 1px; }
-.setting-row .sr-control { margin-left: auto; }
+.setting-row .sr-control { margin-inline-start: auto; }
 .toggle { width: 40px; height: 23px; border-radius: 999px; background: var(--ink-200); position: relative; cursor: pointer; transition: background 0.15s; border: none; flex-shrink: 0; }
 .toggle.on { background: var(--blue-500); }
 .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: white; transition: transform 0.15s; box-shadow: var(--sh-1); }

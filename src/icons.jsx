@@ -1,5 +1,9 @@
 // SVG icons — single-file, lucide-style 1.5 stroke
+// Icons that point somewhere are mirrored in right-to-left layouts (CSS .dir-flip).
+const DIRECTIONAL = new Set(['chevron-left', 'chevron-right', 'arrow-right', 'arrow-left']);
+
 export const Icon = ({ name, size = 16, className = '', style = {} }) => {
+  if (DIRECTIONAL.has(name)) className = `${className} dir-flip`.trim();
   const s = { width: size, height: size, ...style };
   const common = {
     width: size, height: size,

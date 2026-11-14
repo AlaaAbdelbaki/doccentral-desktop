@@ -1,7 +1,8 @@
 // Day timeline (DentaCore schedule component) driven by real appointments.
 // Columns are the clinic's staff users (solo practice → dentist + assistant).
 import { Icon } from './icons.jsx';
-import { fmtTime } from './components.jsx';
+import { fmtTime, roleName } from './components.jsx';
+import { t, locale } from './lib/i18n.jsx';
 
 const HOUR_PX = 60;
 const START_HOUR = 8;
@@ -26,27 +27,27 @@ const hourOf = (iso) => {
 export const DayTimeline = ({ appointments, providers, onPick, showNowLine = true }) => {
   const hours = [];
   for (let h = START_HOUR; h <= END_HOUR; h++) hours.push(h);
-  const fmtH = (h) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? 'AM' : 'PM'}`;
+  const fmtH = (h) => new Date(2024, 0, 1, h).toLocaleTimeString(locale(), { hour: 'numeric' });
 
   const now = new Date();
   const nowHour = now.getHours() + now.getMinutes() / 60;
   const showNow = showNowLine && nowHour >= START_HOUR && nowHour <= END_HOUR;
-  const cols = providers.length ? providers : [{ id: '_', first_name: 'Clinic', last_name: '' }];
+  const cols = providers.length ? providers : [{ id: '_', first_name: t('Clinic'), last_name: '' }];
 
   return (
     <div className="schedule-wrap">
       <div className="schedule-toolbar">
-        <div className="date-pill"><span>{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span></div>
+        <div className="date-pill"><span>{now.toLocaleDateString(locale(), { weekday: 'long', month: 'long', day: 'numeric' })}</span></div>
         <div className="legend">
-          <span><i style={{ background: 'var(--blue-200)' }}/>Exam</span>
-          <span><i style={{ background: 'var(--mint-200)' }}/>Hygiene</span>
-          <span><i style={{ background: 'var(--coral-200)' }}/>Surgery</span>
-          <span><i style={{ background: 'var(--amber-200)' }}/>Emergency</span>
+          <span><i style={{ background: 'var(--blue-200)' }}/>{t('Exam')}</span>
+          <span><i style={{ background: 'var(--mint-200)' }}/>{t('Hygiene')}</span>
+          <span><i style={{ background: 'var(--coral-200)' }}/>{t('Surgery')}</span>
+          <span><i style={{ background: 'var(--amber-200)' }}/>{t('Emergency')}</span>
         </div>
       </div>
       <div className="schedule" style={{ gridTemplateColumns: `56px repeat(${cols.length}, 1fr)` }}>
         <div className="sch-head" style={{ background: 'var(--white)' }}>
-          <span style={{ fontSize: 11, color: 'var(--ink-500)', fontWeight: 500 }}>Time</span>
+          <span style={{ fontSize: 11, color: 'var(--ink-500)', fontWeight: 500 }}>{t('Time')}</span>
         </div>
         {cols.map((u) => (
           <div key={u.id} className="sch-head">
@@ -54,7 +55,7 @@ export const DayTimeline = ({ appointments, providers, onPick, showNowLine = tru
               <span className="sch-head-status busy"/>
               {u.first_name} {u.last_name}
             </div>
-            <div className="sch-head-meta">{u.is_clinic_owner ? 'Dentist' : 'Staff'}</div>
+            <div className="sch-head-meta">{u.is_clinic_owner ? t('Dentist') : roleName(u.role_name)}</div>
           </div>
         ))}
         <div className="sch-time-col">
@@ -90,7 +91,7 @@ export const DayTimeline = ({ appointments, providers, onPick, showNowLine = tru
               })}
           </div>
         ))}
-        {showNow && <div className="now-line" style={{ top: 41 + (nowHour - START_HOUR) * HOUR_PX }}/>}
+        {showNow && <div className="now-line" data-label={fmtTime(now.toISOString())} style={{ top: 41 + (nowHour - START_HOUR) * HOUR_PX }}/>}
       </div>
     </div>
   );

@@ -2,11 +2,11 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { useAuth } from '../lib/auth.jsx';
-import { useLang } from '../lib/i18n.jsx';
+import { useLang, t } from '../lib/i18n.jsx';
 
 export const SignInPage = () => {
   const { signIn, signUp, clinic, notice, setNotice } = useAuth();
-  const { t } = useLang();
+  const { lang, setLang } = useLang();
   const [mode, setMode] = useState(clinic ? 'signin' : 'signin');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -45,21 +45,21 @@ export const SignInPage = () => {
           <div className="side-brand-mark" style={{ width: 38, height: 38, fontSize: 22 }}>D</div>
           <div>
             <div className="side-brand-name" style={{ fontSize: 17 }}>DocCentral</div>
-            <div className="side-brand-sub">Clinic management</div>
+            <div className="side-brand-sub">{t('Clinic management')}</div>
           </div>
         </div>
-        <div className="auth-title">{mode === 'signup' ? 'Create your clinic' : t('Sign in')}</div>
+        <div className="auth-title">{mode === 'signup' ? t('Create your clinic') : t('Sign in')}</div>
         <div className="auth-sub">
           {mode === 'signup'
-            ? 'First run — this provisions the clinic and the owner (Dentist) account.'
-            : 'Use your clinic account. Sessions persist across restarts.'}
+            ? t('First run — this provisions the clinic and the owner (Dentist) account.')
+            : t('Use your clinic account. Sessions persist across restarts.')}
         </div>
         {error && <div className="auth-error">{error}</div>}
         {notice && <div className="auth-notice">{notice}</div>}
         {mode === 'signup' && (
           <>
             <div className="field"><label>{t('Clinic')}</label>
-              <input required value={form.clinicName} onChange={set('clinicName')} placeholder="Cabinet Dentaire — Tunis"/></div>
+              <input required value={form.clinicName} onChange={set('clinicName')} placeholder={t('Cabinet Dentaire — Tunis')}/></div>
             <div className="form-row">
               <div className="field"><label>{t('First name')}</label><input required value={form.firstName} onChange={set('firstName')}/></div>
               <div className="field"><label>{t('Last name')}</label><input required value={form.lastName} onChange={set('lastName')}/></div>
@@ -74,10 +74,16 @@ export const SignInPage = () => {
           {busy ? '…' : mode === 'signup' ? t('Sign up') : t('Sign in')}
           {!busy && <Icon name="arrow-right" size={14}/>}
         </button>
+        <div className="auth-lang" role="group" aria-label={t('Language')}>
+          {[['en', 'English'], ['fr', 'Français'], ['ar', 'العربية']].map(([code, label]) => (
+            <button key={code} type="button" className={`chip ${lang === code ? 'active' : ''}`}
+                    onClick={() => setLang(code)}>{label}</button>
+          ))}
+        </div>
         <div className="auth-switch">
           {mode === 'signup'
-            ? <>Already provisioned? <a onClick={() => setMode('signin')}>{t('Sign in')}</a></>
-            : <>First run on this clinic? <a onClick={() => setMode('signup')}>Create the clinic</a></>}
+            ? <>{t('Already provisioned?')} <a onClick={() => setMode('signin')}>{t('Sign in')}</a></>
+            : <>{t('First run on this clinic?')} <a onClick={() => setMode('signup')}>{t('Create the clinic')}</a></>}
         </div>
       </form>
     </div>
