@@ -102,7 +102,7 @@ input, textarea, select { font-family: inherit; }
 /* Sidebar */
 .side {
   background: var(--white);
-  border-right: 1px solid var(--ink-150);
+  border-inline-end: 1px solid var(--ink-150);
   display: flex;
   flex-direction: column;
   padding: 18px 14px;
@@ -170,7 +170,7 @@ input, textarea, select { font-family: inherit; }
 .nav-item.active::before {
   content: '';
   position: absolute;
-  left: -14px;
+  inset-inline-start: -14px;
   top: 6px;
   bottom: 6px;
   width: 3px;
@@ -179,7 +179,7 @@ input, textarea, select { font-family: inherit; }
 }
 .nav-item svg { flex-shrink: 0; }
 .nav-badge {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: 11px;
   font-weight: 600;
   background: var(--coral-500);
@@ -263,7 +263,7 @@ input, textarea, select { font-family: inherit; }
   color: var(--ink-500);
 }
 .search {
-  margin-left: auto;
+  margin-inline-start: auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -278,7 +278,7 @@ input, textarea, select { font-family: inherit; }
 }
 .search:hover { border-color: var(--ink-200); }
 .search kbd {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
   font-size: 11px;
   background: var(--white);
@@ -430,7 +430,7 @@ input, textarea, select { font-family: inherit; }
   font-size: 12px;
   color: var(--ink-500);
 }
-.card-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.card-actions { margin-inline-start: auto; display: flex; gap: 6px; align-items: center; }
 .tab {
   font-size: 12px;
   font-weight: 500;
@@ -473,7 +473,7 @@ input, textarea, select { font-family: inherit; }
 }
 .date-pill .nav:hover { background: var(--ink-150); color: var(--ink-900); }
 .legend {
-  margin-left: auto;
+  margin-inline-start: auto;
   display: flex;
   gap: 12px;
   font-size: 11.5px;
@@ -506,7 +506,7 @@ input, textarea, select { font-family: inherit; }
   font-size: 12.5px;
   color: var(--ink-900);
 }
-.sch-head:not(:first-child) { border-left: 1px solid var(--ink-150); }
+.sch-head:not(:first-child) { border-inline-start: 1px solid var(--ink-150); }
 .sch-head-meta {
   font-weight: 500;
   font-size: 11px;
@@ -525,20 +525,20 @@ input, textarea, select { font-family: inherit; }
   display: contents;
 }
 .sch-time-col {
-  border-right: 1px solid var(--ink-150);
+  border-inline-end: 1px solid var(--ink-150);
   background: var(--ink-50);
   position: relative;
 }
 .sch-chair-col {
   position: relative;
-  border-right: 1px solid var(--ink-150);
+  border-inline-end: 1px solid var(--ink-150);
   background: repeating-linear-gradient(to bottom,
     transparent 0,
     transparent 59px,
     var(--ink-100) 59px,
     var(--ink-100) 60px);
 }
-.sch-chair-col:last-child { border-right: none; }
+.sch-chair-col:last-child { border-inline-end: none; }
 
 .sch-hour {
   height: 60px;
@@ -555,8 +555,8 @@ input, textarea, select { font-family: inherit; }
 
 .appt {
   position: absolute;
-  left: 4px;
-  right: 4px;
+  inset-inline-start: 4px;
+  inset-inline-end: 4px;
   border-radius: var(--r-sm);
   padding: 6px 8px;
   font-size: 12px;
@@ -617,17 +617,17 @@ input, textarea, select { font-family: inherit; }
 
 .now-line {
   position: absolute;
-  left: 56px;
-  right: 0;
+  inset-inline-start: 56px; /* beside the time column, on either side in LTR/RTL */
+  inset-inline-end: 0;
   height: 0;
   border-top: 1.5px solid var(--coral-500);
   z-index: 4;
   pointer-events: none;
 }
 .now-line::before {
-  content: 'NOW';
+  content: attr(data-label); /* translated label set by the timeline */
   position: absolute;
-  left: -48px;
+  inset-inline-start: -48px;
   top: -8px;
   background: var(--coral-500);
   color: white;
@@ -641,7 +641,7 @@ input, textarea, select { font-family: inherit; }
 .now-line::after {
   content: '';
   position: absolute;
-  left: -3px;
+  inset-inline-start: -3px;
   top: -3.5px;
   width: 6px; height: 6px;
   border-radius: 50%;
@@ -679,7 +679,7 @@ input, textarea, select { font-family: inherit; }
   font-size: 11px;
   font-weight: 500;
   color: var(--ink-600);
-  text-align: right;
+  text-align: end;
 }
 .wait-time strong {
   display: block;
@@ -841,7 +841,7 @@ input, textarea, select { font-family: inherit; }
   display: flex; align-items: center; gap: 6px;
 }
 .lab-sub b { color: var(--ink-700); font-weight: 600; }
-.lab-eta { text-align: right; font-size: 11px; color: var(--ink-500); }
+.lab-eta { text-align: end; font-size: 11px; color: var(--ink-500); }
 .lab-eta strong { display: block; font-size: 12.5px; color: var(--ink-900); font-weight: 600; }
 .lab-eta.late strong { color: var(--coral-700); }
 
@@ -899,7 +899,7 @@ input, textarea, select { font-family: inherit; }
   font-size: 12px;
   font-weight: 600;
   color: var(--ink-900);
-  text-align: right;
+  text-align: end;
 }
 .inv-stock small { display: block; color: var(--ink-400); font-weight: 500; font-size: 10.5px; font-family: var(--font-ui); }
 
@@ -921,12 +921,12 @@ input, textarea, select { font-family: inherit; }
 .staff-name { font-weight: 600; font-size: 12.5px; color: var(--ink-900); line-height: 1.2; }
 .staff-role { font-size: 11px; color: var(--ink-500); }
 .staff-status {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
   font-size: 10.5px;
   font-weight: 500;
   color: var(--ink-500);
-  text-align: right;
+  text-align: end;
 }
 
 /* Patient drawer */
@@ -985,7 +985,7 @@ input, textarea, select { font-family: inherit; }
   display: flex; align-items: center; gap: 10px;
 }
 .drawer-close {
-  margin-left: auto;
+  margin-inline-start: auto;
   background: none;
   border: none;
   color: var(--ink-500);
@@ -1086,3 +1086,13 @@ input, textarea, select { font-family: inherit; }
 @media (max-width: 1100px) {
   .kpis { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ---- Right-to-left (Arabic) */
+/* The monospace font has no Arabic glyphs, which garbles mixed text like
+   "90 د.ت"; use the UI font with evenly spaced digits instead. */
+html[dir="rtl"] { --font-mono: var(--font-sans); }
+html[dir="rtl"] .num { font-variant-numeric: tabular-nums; }
+/* Arrows and chevrons point in the reading direction. */
+html[dir="rtl"] .dir-flip { transform: scaleX(-1); }
+/* Phone numbers, emails and similar stay left-to-right inside Arabic text. */
+.ltr { direction: ltr; unicode-bidi: isolate; }

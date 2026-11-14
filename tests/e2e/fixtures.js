@@ -8,22 +8,34 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 
+// Launch the app on a data dir, simulating a PC whose display language is
+// `systemLanguage` (Chromium's --lang switch drives navigator.language).
+const launchApp = (dataDir, { systemLanguage = 'en-US', videoDir } = {}) => electron.launch({
+  args: ['.', `--lang=${systemLanguage}`],
+  cwd: ROOT,
+  env: { ...process.env, DOC_DEV_AUTOLOGIN: '1', DOC_DATA_DIR: dataDir },
+  ...(videoDir ? { recordVideo: { dir: videoDir, size: { width: 1440, height: 900 } } } : {}),
+});
+
 const test = base.test.extend({
-  app: async ({}, use, testInfo) => {
-    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-e2e-'));
+  // The PC language the app sees. English by default so the suite behaves the
+  // same on any machine (a French Windows would otherwise open in French).
+  systemLanguage: ['en-US', { option: true }],
+
+  dataDir: async ({}, use) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-e2e-'));
+    await use(dir);
+    fs.rmSync(dir, { recursive: true, force: true });
+  },
+
+  app: async ({ dataDir, systemLanguage }, use, testInfo) => {
     const videoDir = testInfo.outputPath('video');
-    const app = await electron.launch({
-      args: ['.'],
-      cwd: ROOT,
-      env: { ...process.env, DOC_DEV_AUTOLOGIN: '1', DOC_DATA_DIR: dataDir },
-      recordVideo: { dir: videoDir, size: { width: 1440, height: 900 } },
-    });
+    const app = await launchApp(dataDir, { systemLanguage, videoDir });
     await use(app);
     await app.close();
     for (const f of fs.existsSync(videoDir) ? fs.readdirSync(videoDir) : []) {
       await testInfo.attach('video', { path: path.join(videoDir, f), contentType: 'video/webm' });
     }
-    fs.rmSync(dataDir, { recursive: true, force: true });
   },
 
   page: async ({ app }, use, testInfo) => {
@@ -57,4 +69,4 @@ const field = (page, label) =>
 // Raw SQL against the app's local DB (via the preload bridge) for assertions.
 const sql = (page, query, params = []) => page.evaluate(([q, p]) => window.dc.db.all(q, p), [query, params]);
 
-module.exports = { test, expect: base.expect, snap, nav, modal, field, sql };
+module.exports = { test, expect: base.expect, snap, nav, modal, field, sql, launchApp };

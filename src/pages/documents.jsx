@@ -6,6 +6,7 @@ import { Modal, Field, fmtDate, fullName, EmptyState } from '../components.jsx';
 import { attachmentRepo, patientRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
+import { t } from '../lib/i18n.jsx';
 
 const isImage = (name) => /\.(png|jpe?g|gif|webp|bmp)$/i.test(name);
 
@@ -55,13 +56,13 @@ export const DocumentsPage = ({ onNavigate, badges }) => {
     <div className="app">
       <Sidebar active="docs" onNavigate={onNavigate} badges={badges}/>
       <main className="main">
-        <Topbar title={<span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500 }}>Documents</span>}
-          subtitle={`${docs.length} files · imaging, consents, records`}
-          actions={<button className="btn-primary" onClick={startUpload}><Icon name="plus" size={14}/>Upload</button>}/>
+        <Topbar title={<span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500 }}>{t('Documents')}</span>}
+          subtitle={t('{n} files · imaging, consents, records', { n: docs.length })}
+          actions={<button className="btn-primary" onClick={startUpload}><Icon name="plus" size={14}/>{t('Upload')}</button>}/>
         <div className="content">
           <div className="toolbar">
             <div className="search-inline">
-              <Icon name="search" size={14}/><input placeholder="Search files or patients…" value={q} onChange={(e) => setQ(e.target.value)}/>
+              <Icon name="search" size={14}/><input placeholder={t('Search files or patients…')} value={q} onChange={(e) => setQ(e.target.value)}/>
             </div>
           </div>
           {filtered.length ? (
@@ -76,7 +77,7 @@ export const DocumentsPage = ({ onNavigate, badges }) => {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <Icon name={isImage(d.file_name) ? 'tooth' : 'file-text'} size={30}/>
                       <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                        {isImage(d.file_name) ? 'Imaging' : 'Document'}
+                        {isImage(d.file_name) ? t('Imaging') : t('Document')}
                       </span>
                     </div>
                   </div>
@@ -87,30 +88,30 @@ export const DocumentsPage = ({ onNavigate, badges }) => {
                 </div>
               ))}
             </div>
-          ) : <EmptyState icon="file-text" title="No documents" hint="Upload X-rays, consents and records against a patient."/>}
+          ) : <EmptyState icon="file-text" title={t('No documents')} hint={t('Upload X-rays, consents and records against a patient.')}/>}
         </div>
       </main>
 
       {uploading && (
-        <Modal title={`Upload — ${uploading.picked.name}`} onClose={() => setUploading(null)}
+        <Modal title={t('Upload — {file}', { file: uploading.picked.name })} onClose={() => setUploading(null)}
           footer={<>
-            <button className="btn-ghost" onClick={() => setUploading(null)}>Cancel</button>
-            <button className="btn-primary" disabled={!uploading.patientId} onClick={confirmUpload}><Icon name="check" size={13}/>Upload</button>
+            <button className="btn-ghost" onClick={() => setUploading(null)}>{t('Cancel')}</button>
+            <button className="btn-primary" disabled={!uploading.patientId} onClick={confirmUpload}><Icon name="check" size={13}/>{t('Upload')}</button>
           </>}>
-          <Field label="Attach to patient">
+          <Field label={t('Attach to patient')}>
             <select value={uploading.patientId} onChange={(e) => setUploading({ ...uploading, patientId: e.target.value })}>
               {patients.map((p) => <option key={p.id} value={p.id}>{fullName(p)}</option>)}
             </select>
           </Field>
           <div style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>
-            {(uploading.picked.size / 1024).toFixed(0)} KB — stored locally, mirrored on sync.
+            {t('{size} KB — the file stays on this computer; only its record syncs.', { size: (uploading.picked.size / 1024).toFixed(0) })}
           </div>
         </Modal>
       )}
 
       {preview && (
         <Modal wide title={preview.file_name} onClose={() => setPreview(null)}
-          footer={<button className="btn-ghost" onClick={() => window.dc.files.open(preview.storage_path)}>Open in system viewer</button>}>
+          footer={<button className="btn-ghost" onClick={() => window.dc.files.open(preview.storage_path)}>{t('Open in system viewer')}</button>}>
           <img className="attach-preview" src={preview.dataUrl} alt={preview.file_name}/>
         </Modal>
       )}

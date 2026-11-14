@@ -1,35 +1,34 @@
 // Shared app shell — sidebar + topbar (DentaCore design, DocCentral modules).
 import { useEffect, useState } from 'react';
 import { Icon } from './icons.jsx';
-import { useLang } from './lib/i18n.jsx';
+import { t } from './lib/i18n.jsx';
 import { useAuth } from './lib/auth.jsx';
 import { onSyncState } from './lib/sync.js';
 import { requestNavigate } from './lib/nav.js';
-import { initialsOf } from './components.jsx';
+import { initialsOf, roleLabel } from './components.jsx';
 
 export const NAV = {
   clinical: [
-    { id: 'home', icon: 'home', label: 'Home' },
-    { id: 'calendar', icon: 'calendar', label: 'Calendar' },
-    { id: 'patients', icon: 'users', label: 'Patients' },
-    { id: 'invoices', icon: 'dollar', label: 'Invoices' },
-    { id: 'docs', icon: 'file-text', label: 'Documents' },
+    { id: 'home', icon: 'home', label: () => t('Home') },
+    { id: 'calendar', icon: 'calendar', label: () => t('Calendar') },
+    { id: 'patients', icon: 'users', label: () => t('Patients') },
+    { id: 'invoices', icon: 'dollar', label: () => t('Invoices') },
+    { id: 'docs', icon: 'file-text', label: () => t('Documents') },
   ],
   ops: [
-    { id: 'inventory', icon: 'package', label: 'Inventory' },
-    { id: 'closeout', icon: 'clock', label: 'Day closeout' },
-    { id: 'settings', icon: 'settings', label: 'Settings' },
+    { id: 'inventory', icon: 'package', label: () => t('Inventory') },
+    { id: 'closeout', icon: 'clock', label: () => t('Day closeout') },
+    { id: 'settings', icon: 'settings', label: () => t('Settings') },
   ],
 };
 
 export const Sidebar = ({ active, onNavigate, badges = {} }) => {
-  const { t } = useLang();
   const { localUser, clinic } = useAuth();
   const NavLink = (n) => (
     <a key={n.id} href="#" onClick={(e) => { e.preventDefault(); onNavigate(n.id); }}
        className={`nav-item ${active === n.id ? 'active' : ''}`}>
       <Icon name={n.icon} size={16}/>
-      <span>{t(n.label)}</span>
+      <span>{n.label()}</span>
       {badges[n.id] > 0 && <span className="nav-badge">{badges[n.id]}</span>}
     </a>
   );
@@ -50,7 +49,7 @@ export const Sidebar = ({ active, onNavigate, badges = {} }) => {
         <div className="avatar online">{localUser ? initialsOf(localUser.first_name, localUser.last_name) : '·'}</div>
         <div style={{ minWidth: 0 }}>
           <div className="side-user-name">{localUser ? `${localUser.first_name} ${localUser.last_name}` : ''}</div>
-          <div className="side-user-role">{localUser?.is_clinic_owner ? 'Dentist · Clinic owner' : 'Staff'}</div>
+          <div className="side-user-role">{roleLabel(localUser)}</div>
         </div>
       </div>
     </aside>
@@ -62,19 +61,18 @@ export const SyncPill = () => {
   useEffect(() => onSyncState(setS), []);
   const open = () => requestNavigate('settings', { section: 'data' });
   const pill = (cls, label) => (
-    <span className={`sync-pill ${cls} clickable`} title={s.error || 'Open sync settings'} onClick={open}>
+    <span className={`sync-pill ${cls} clickable`} title={s.error?.() || t('Open sync settings')} onClick={open}>
       <span className="pdot"/>{label}
     </span>
   );
-  if (s.status === 'syncing') return pill('', 'Syncing…');
-  if (s.status === 'synced' && !s.pending) return pill('ok', 'Synced');
-  if (s.pending > 0) return pill('pending', `${s.pending} pending`);
-  if (s.status === 'offline') return pill('off', 'Offline');
-  return pill('off', 'Local');
+  if (s.status === 'syncing') return pill('', t('Syncing…'));
+  if (s.status === 'synced' && !s.pending) return pill('ok', t('Synced'));
+  if (s.pending > 0) return pill('pending', t('{n} pending', { n: s.pending }));
+  if (s.status === 'offline') return pill('off', t('Offline'));
+  return pill('off', t('Local'));
 };
 
 export const Topbar = ({ title, subtitle, greeting, actions, onSearch, searchPlaceholder }) => {
-  const { t } = useLang();
   return (
     <div className="topbar">
       {greeting ? greeting : (
@@ -85,14 +83,14 @@ export const Topbar = ({ title, subtitle, greeting, actions, onSearch, searchPla
       )}
       {onSearch ? (
         <div className="search" style={{ padding: 0, overflow: 'hidden' }}>
-          <span style={{ paddingLeft: 10, display: 'grid', placeItems: 'center' }}><Icon name="search" size={14}/></span>
+          <span style={{ paddingInlineStart: 10, display: 'grid', placeItems: 'center' }}><Icon name="search" size={14}/></span>
           <input
             placeholder={searchPlaceholder || t('Search')}
             onChange={(e) => onSearch(e.target.value)}
             style={{ border: 'none', outline: 'none', background: 'transparent', flex: 1, padding: '7px 10px 7px 0', fontSize: 13, color: 'var(--ink-900)' }}
           />
         </div>
-      ) : <div style={{ marginLeft: 'auto' }}/>}
+      ) : <div style={{ marginInlineStart: 'auto' }}/>}
       <SyncPill/>
       {actions}
     </div>

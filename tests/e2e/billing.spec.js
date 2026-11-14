@@ -31,7 +31,7 @@ test('visit to paid invoice, end to end', async ({ page }) => {
   await treatAmira(page);
   await snap(page, 'visit-in-progress');
   await modal(page).getByRole('button', { name: 'Complete visit' }).click();
-  await expect(modal(page)).toContainText('invoice draft');
+  await expect(modal(page)).toContainText('invoice: Draft');
   await snap(page, 'visit-completed');
   await modal(page).getByRole('button', { name: 'Close' }).click();
 

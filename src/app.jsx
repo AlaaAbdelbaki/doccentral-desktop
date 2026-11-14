@@ -1,7 +1,7 @@
 // DocCentral app root: auth gate → SPA navigation between feature pages.
 import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
-import { LangProvider } from './lib/i18n.jsx';
+import { LangProvider, useLang, t } from './lib/i18n.jsx';
 import { startAutoSync } from './lib/sync.js';
 import { onNavigateRequest } from './lib/nav.js';
 import { onDataChanged } from './lib/dbx.js';
@@ -23,6 +23,7 @@ const PAGES = {
 };
 
 const Main = () => {
+  useLang(); // subscribe: a language switch re-renders the whole app, so every t() updates
   const { loading, session, localUser } = useAuth();
   const [route, setRoute] = useState({ page: 'home', params: null });
   const [badges, setBadges] = useState({});
@@ -57,7 +58,7 @@ const Main = () => {
       <div className="auth-wrap">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="side-brand-mark" style={{ width: 38, height: 38, fontSize: 22 }}>D</div>
-          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, color: 'var(--ink-500)' }}>Loading DocCentral…</span>
+          <span style={{ fontFamily: 'var(--font-serif)', fontSize: 20, color: 'var(--ink-500)' }}>{t('Loading DocCentral…')}</span>
         </div>
       </div>
     );

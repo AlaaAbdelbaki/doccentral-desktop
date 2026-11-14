@@ -1,6 +1,7 @@
 // Repositories + services per feature (UI → repo → SQLite bridge),
 // mirroring the Flutter app's feature set and lifecycle rules from the PRD.
 import { all, get, run, insert, update, softDelete, nowIso, emitDataChanged } from './dbx.js';
+import { t } from './translate.js';
 
 const LIVE = 'deleted_at IS NULL';
 const dayRange = (date) => {
@@ -232,11 +233,11 @@ export const invoiceRepo = {
     return Math.max(0, inv.total_amount - paid.s);
   },
   addAdjustment: async (invoiceId, type, description, amount) => {
-    if (!(amount > 0)) throw new Error('Amount must be greater than zero.');
+    if (!(amount > 0)) throw new Error(t('Amount must be greater than zero.'));
     const inv = await invoiceRepo.byId(invoiceId);
-    if (inv.status !== 'draft') throw new Error('Only draft invoices can be adjusted.');
+    if (inv.status !== 'draft') throw new Error(t('Only draft invoices can be adjusted.'));
     if (type === 'discount' && amount > inv.total_amount + 0.001) {
-      throw new Error(`Discount cannot exceed the invoice total (${inv.total_amount}).`);
+      throw new Error(t('Discount cannot exceed the invoice total ({amount}).', { amount: inv.total_amount }));
     }
     const signed = type === 'discount' ? -Math.abs(amount) : Math.abs(amount);
     await insert('invoice_items', {
@@ -257,13 +258,13 @@ export const invoiceRepo = {
     emitDataChanged();
   },
   recordPayment: async (invoiceId, amount, method, notes, actorUserId) => {
-    if (!(amount > 0)) throw new Error('Payment amount must be greater than zero.');
+    if (!(amount > 0)) throw new Error(t('Payment amount must be greater than zero.'));
     const current = await invoiceRepo.byId(invoiceId);
     if (!['unpaid', 'partially_paid'].includes(current.status)) {
-      throw new Error('Payments can only be recorded on finalized, unpaid invoices.');
+      throw new Error(t('Payments can only be recorded on finalized, unpaid invoices.'));
     }
     const due = await invoiceRepo.amountDue(invoiceId);
-    if (amount > due + 0.001) throw new Error(`Payment exceeds the amount due (${due}).`);
+    if (amount > due + 0.001) throw new Error(t('Payment exceeds the amount due ({amount}).', { amount: due }));
     await insert('payments', {
       invoice_id: invoiceId, amount, method: method || 'cash',
       payment_date: nowIso(), notes: notes || null, recorded_by_user_id: actorUserId,

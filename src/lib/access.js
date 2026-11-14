@@ -9,6 +9,8 @@
 //   { action: 'pull' }       member in the cloud; download the clinic first
 //   { action: 'provision' }  account with no clinic anywhere; create one
 //   { action: 'refuse', message }
+import { t } from './translate.js';
+
 export function decideAccess({ localClinic, localUser, remote }) {
   if (localUser) return { action: 'open' };
   const name = localClinic?.name;
@@ -16,8 +18,8 @@ export function decideAccess({ localClinic, localUser, remote }) {
     return {
       action: 'refuse',
       message: localClinic
-        ? `This account hasn't been used on this computer before. Connect to the internet so it can be verified as a member of ${name}.`
-        : 'The first sign-in on this computer needs an internet connection to download your clinic.',
+        ? t("This account hasn't been used on this computer before. Connect to the internet so it can be verified as a member of {clinic}.", { clinic: name })
+        : t('The first sign-in on this computer needs an internet connection to download your clinic.'),
     };
   }
   const m = remote.membership;
@@ -26,13 +28,13 @@ export function decideAccess({ localClinic, localUser, remote }) {
   if (localClinic && remote.schemaMissing) {
     return {
       action: 'refuse',
-      message: `New accounts can't be verified yet because cloud sync isn't set up. The owner of ${name} should finish the setup under Settings → Data & sync.`,
+      message: t("New accounts can't be verified yet because cloud sync isn't set up. The owner of {clinic} should finish the setup under Settings → Data & sync.", { clinic: name }),
     };
   }
   return {
     action: 'refuse',
     message: localClinic
-      ? `This account is not a member of ${name}. Ask the clinic owner to add you under Settings → Team & roles.`
-      : 'This account belongs to another clinic.',
+      ? t('This account is not a member of {clinic}. Ask the clinic owner to add you under Settings → Team & roles.', { clinic: name })
+      : t('This account belongs to another clinic.'),
   };
 }

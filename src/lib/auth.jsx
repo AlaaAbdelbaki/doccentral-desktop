@@ -6,6 +6,7 @@ import { clinicRepo, userRepo } from './repos.js';
 import { seedDemoData } from './seed.js';
 import { fetchMembership, initialPull } from './sync.js';
 import { decideAccess } from './access.js';
+import { t } from './translate.js';
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -60,11 +61,11 @@ export const AuthProvider = ({ children }) => {
         await initialPull();
         c = await clinicRepo.current();
         u = await userRepo.byAuthId(sess.user.id);
-        if (!c || !u) throw new Error('Could not download your clinic data. Check your connection and try again.');
+        if (!c || !u) throw new Error(t('Could not download your clinic data. Check your connection and try again.'));
       } else if (decision.action === 'provision') {
         const guess = (sess.user.email || 'user').split('@')[0];
         ({ clinic: c, user: u } = await provisionClinic({
-          clinicName: 'My Clinic', firstName: guess, lastName: '',
+          clinicName: t('My Clinic'), firstName: guess, lastName: '',
           email: sess.user.email || '', authUserId: sess.user.id,
         }));
       }
@@ -120,11 +121,11 @@ export const AuthProvider = ({ children }) => {
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    if (!data.session) throw new Error('Sign-in did not return a session. If you just signed up, confirm your email first.');
+    if (!data.session) throw new Error(t('Sign-in did not return a session. If you just signed up, confirm your email first.'));
     let user;
     try {
       ({ user } = await loadLocal(data.session));
-      if (!user) throw new Error('Signed in, but the local clinic record could not be created.');
+      if (!user) throw new Error(t('Signed in, but the local clinic record could not be created.'));
     } catch (e) {
       try { await supabase.auth.signOut(); } catch {}
       throw e;
@@ -137,15 +138,15 @@ export const AuthProvider = ({ children }) => {
   const signUp = async ({ clinicName, firstName, lastName, email, password }) => {
     const existing = await clinicRepo.current();
     if (existing) {
-      throw new Error(`This computer is already set up for ${existing.name}. Sign in instead, or ask the owner to add you.`);
+      throw new Error(t('This computer is already set up for {clinic}. Sign in instead, or ask the owner to add you.', { clinic: existing.name }));
     }
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
     const authUserId = data.user?.id;
-    if (!authUserId) throw new Error('Sign-up failed: no user returned');
+    if (!authUserId) throw new Error(t('Sign-up failed: no user returned.'));
     await provisionClinic({ clinicName, firstName, lastName, email, authUserId });
     if (!data.session) {
-      setNotice('Account created. Confirm your email, then sign in.');
+      setNotice(t('Account created. Confirm your email, then sign in.'));
     }
     await loadLocal(data.session);
     setSession(data.session);
@@ -154,7 +155,7 @@ export const AuthProvider = ({ children }) => {
 
   const addStaff = async ({ firstName, lastName, email, password, roleName }) => {
     const c = await clinicRepo.current();
-    if (!c) throw new Error('No clinic provisioned');
+    if (!c) throw new Error(t('No clinic is set up on this computer.'));
     // The staff record must carry the real account id: it is what makes them a
     // member of this clinic in the cloud (and lets them sign in on any PC).
     // A random offline id would create a record nobody can ever sign in as.
@@ -167,10 +168,10 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       const msg = e?.message || String(e);
       throw new Error(/registered|exists/i.test(msg)
-        ? `${email} already has an account. Adding existing accounts isn't supported yet — use a different email.`
-        : `Couldn't create the account (${msg}). Adding staff needs an internet connection.`);
+        ? t("{email} already has an account. Adding existing accounts isn't supported yet — use a different email.", { email })
+        : t("Couldn't create the account ({error}). Adding staff needs an internet connection.", { error: msg }));
     }
-    if (!authUserId) throw new Error('Account creation returned no user — try again.');
+    if (!authUserId) throw new Error(t('Account creation returned no user — try again.'));
     const user = await userRepo.create({
       clinic_id: c.id, first_name: firstName, last_name: lastName,
       email, auth_user_id: authUserId, is_clinic_owner: 0,

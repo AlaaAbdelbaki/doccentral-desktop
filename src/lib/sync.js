@@ -5,6 +5,7 @@
 import { all, run, emitDataChanged, resetClinicCache } from './dbx.js';
 import { supabase } from './supabase.js';
 import { createSyncEngine, SYNC_TABLES } from './sync-core.js';
+import { t } from './translate.js';
 import MIGRATION_0001 from '../../supabase/migrations/0001_init_doccentral.sql';
 import MIGRATION_0002 from '../../supabase/migrations/0002_clinic_isolation_and_sync.sql';
 
@@ -34,6 +35,8 @@ const supabaseRemote = {
 const engine = createSyncEngine({ local: { all, run }, remote: supabaseRemote });
 
 const listeners = new Set();
+// `error` is a function returning the message, so it's translated when shown
+// (a stored string would keep the language that was active when it was set).
 let state = { status: 'idle', pending: 0, lastSync: null, error: null, errors: [] };
 export const onSyncState = (fn) => { listeners.add(fn); fn(state); return () => listeners.delete(fn); };
 const setState = (patch) => { state = { ...state, ...patch }; listeners.forEach((fn) => fn(state)); };
@@ -49,7 +52,7 @@ export function syncNow(session) {
 
 async function doSync(session) {
   if (!session) {
-    setState({ status: 'offline', pending: await pendingCount(), errors: [], error: 'Not signed in — records kept locally' });
+    setState({ status: 'offline', pending: await pendingCount(), errors: [], error: () => t('Not signed in — records kept locally') });
     return 0;
   }
   setState({ status: 'syncing', error: null });
@@ -60,7 +63,7 @@ async function doSync(session) {
     status: errors.length ? (pending ? 'pending' : 'idle') : 'synced',
     pending,
     lastSync: errors.length ? state.lastSync : new Date(),
-    error: errors.length ? `${errors.length} table(s) failed to sync — records kept locally` : null,
+    error: errors.length ? () => t('{n} table(s) failed to sync — records kept locally', { n: errors.length }) : null,
     errors,
     needsSetup: errors.some((e) => isMissingSchema(e.message)),
   });
