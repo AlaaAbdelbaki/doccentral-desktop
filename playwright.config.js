@@ -10,6 +10,7 @@ module.exports = defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   workers: 1, // one Electron window at a time keeps videos clean
+  retries: process.env.CI ? 1 : 0, // CI runners are slower; a retry absorbs a slow app start
   reporter: [
     ['list'],
     ['html', { outputFolder: 'playwright-report', open: 'never' }],

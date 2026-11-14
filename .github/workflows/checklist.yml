@@ -1,0 +1,23 @@
+# Passes only when every task box in the PR description is ticked, so manual
+# verification steps (e.g. "run the setup SQL", "two-PC check") gate the merge.
+# Re-runs whenever the description is edited.
+name: PR checklist
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  checklist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: All task boxes ticked
+        env:
+          BODY: ${{ github.event.pull_request.body }}   # via env: never interpolated into the script
+        run: |
+          open=$(printf '%s\n' "$BODY" | grep -E '^[[:space:]]*[-*] \[ \]' || true)
+          if [ -n "$open" ]; then
+            echo "::error::Unticked items in the PR checklist:"
+            printf '%s\n' "$open"
+            exit 1
+          fi
+          echo "All checklist items ticked."
