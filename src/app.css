@@ -197,3 +197,62 @@
 .report-done { display: flex; gap: 12px; align-items: flex-start; }
 .report-done svg { color: var(--mint-700); flex: none; }
 .report-done-title { font-weight: 600; font-size: 14px; color: var(--ink-900); margin-bottom: 4px; }
+
+/* Busy write buttons (AsyncButton): disabled while the action runs */
+button[aria-busy="true"] { cursor: progress; opacity: 0.7; }
+
+/* Toasts */
+.toasts {
+  position: fixed; inset-block-end: 20px; inset-inline-end: 20px;
+  z-index: 90;
+  display: flex; flex-direction: column; gap: 8px;
+  width: 360px; max-width: calc(100vw - 40px);
+}
+.toast {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 12px 12px 14px;
+  background: var(--white);
+  border: 1px solid var(--ink-150);
+  border-inline-start: 4px solid var(--blue-500, #2F6FED);
+  border-radius: var(--r-md, 10px);
+  box-shadow: var(--sh-pop);
+  font-size: 13px; color: var(--ink-700);
+}
+.toast.error { border-inline-start-color: var(--coral-500); }
+.toast.error > svg { color: var(--coral-500); }
+.toast.success { border-inline-start-color: var(--mint-500); }
+.toast.success > svg { color: var(--mint-500); }
+.toast > svg { flex: none; margin-top: 1px; }
+.toast-text { flex: 1; min-width: 0; }
+.toast-title { font-weight: 600; color: var(--ink-900); }
+.toast-detail { margin-top: 2px; color: var(--ink-500); font-size: 12.5px; overflow-wrap: anywhere; }
+.toast-close {
+  flex: none; border: none; background: transparent; cursor: pointer;
+  color: var(--ink-400); padding: 2px; border-radius: 6px;
+}
+.toast-close:hover { background: var(--ink-100); color: var(--ink-700); }
+
+/* Error screen (ErrorBoundary) */
+.error-screen {
+  min-height: 100vh; display: grid; place-items: center;
+  padding: 32px; background: var(--ink-50);
+}
+.error-card {
+  width: 560px; max-width: 100%;
+  background: var(--white); border: 1px solid var(--ink-150);
+  border-radius: var(--r-lg); box-shadow: var(--sh-pop);
+  padding: 28px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.error-card > svg { color: var(--coral-500); }
+.error-card h1 {
+  margin: 0; font-family: var(--font-serif); font-weight: 500; font-size: 24px;
+  letter-spacing: -0.015em; color: var(--ink-900);
+}
+.error-card p { margin: 0; font-size: 13.5px; color: var(--ink-600, var(--ink-500)); line-height: 1.5; }
+.error-detail {
+  margin: 0; padding: 10px 12px; max-height: 120px; overflow: auto;
+  background: var(--ink-50); border: 1px solid var(--ink-150); border-radius: 8px;
+  font-size: 12px; color: var(--ink-700); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.error-actions { display: flex; gap: 8px; flex-wrap: wrap; }

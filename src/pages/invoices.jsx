@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
-import { Modal, Field, useDirtyGuard, money, fmtDate, fullName, Avatar, StatusPill, EmptyState, statusLabel } from '../components.jsx';
+import { Modal, Field, useDirtyGuard, money, fmtDate, fullName, Avatar, StatusPill, EmptyState, statusLabel, AsyncButton } from '../components.jsx';
 import { invoiceRepo, patientRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -56,7 +56,7 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
       footer={<>
         {isDraft && <button className="btn-ghost" onClick={() => openAdj({ type: 'discount', description: '', amount: '' })}>{t('Add discount')}</button>}
         {isDraft && <button className="btn-ghost" onClick={() => openAdj({ type: 'surcharge', description: '', amount: '' })}>{t('Add surcharge')}</button>}
-        {isDraft && <button className="btn-primary" onClick={async () => { await invoiceRepo.finalize(invoice.id); load(); }}><Icon name="check" size={13}/>{t('Finalize')}</button>}
+        {isDraft && <AsyncButton className="btn-primary" onClick={async () => { await invoiceRepo.finalize(invoice.id); load(); }}><Icon name="check" size={13}/>{t('Finalize')}</AsyncButton>}
         {payable && <button className="btn-primary" onClick={() => openPay({ amount: due.toFixed(2), method: 'cash', notes: '' })}><Icon name="dollar" size={13}/>{t('Record payment')}</button>}
         {!isVoid && invoice.status !== 'paid' && <button className="btn-danger" onClick={() => setVoidReason('')}>{t('Void')}</button>}
         <button className="btn-ghost" onClick={onClose}>{t('Close')}</button>
@@ -83,7 +83,7 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
                 <td className="num" style={{ textAlign: 'end', color: it.total_price < 0 ? 'var(--mint-700)' : undefined }}>{money(it.total_price, currency)}</td>
                 {isDraft && (
                   <td style={{ textAlign: 'end' }}>
-                    {it.adjustment_type && <button className="btn-ghost" onClick={async () => { await invoiceRepo.removeItem(invoice.id, it.id); load(); }}><Icon name="x" size={12}/></button>}
+                    {it.adjustment_type && <AsyncButton className="btn-ghost" onClick={async () => { await invoiceRepo.removeItem(invoice.id, it.id); load(); }}><Icon name="x" size={12}/></AsyncButton>}
                   </td>
                 )}
               </tr>
@@ -114,10 +114,10 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
         <Modal title={adjLabel(adj.type)} onClose={adjGuard.requestClose}
           footer={<>
             <button className="btn-ghost" onClick={adjGuard.requestClose}>{t('Cancel')}</button>
-            <button className="btn-primary" disabled={!(Number(adj.amount) > 0) || adjTooBig} onClick={async () => {
+            <AsyncButton className="btn-primary" disabled={!(Number(adj.amount) > 0) || adjTooBig} onClick={async () => {
               const ok = await attempt(() => invoiceRepo.addAdjustment(invoice.id, adj.type, adj.description || adjKind(adj.type), Number(adj.amount)));
               if (ok) { setAdj(null); load(); }
-            }}><Icon name="check" size={13}/>{t('Add')}</button>
+            }}><Icon name="check" size={13}/>{t('Add')}</AsyncButton>
           </>}>
           {adjTooBig && <div className="auth-error">{t('A discount cannot exceed the invoice total ({amount}).', { amount: money(invoice.total_amount, currency) })}</div>}
           {error && <div className="auth-error">{error}</div>}
@@ -131,10 +131,10 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
         <Modal title={t('Record payment')} onClose={payGuard.requestClose}
           footer={<>
             <button className="btn-ghost" onClick={payGuard.requestClose}>{t('Cancel')}</button>
-            <button className="btn-primary" disabled={!(Number(pay.amount) > 0) || payTooBig} onClick={async () => {
+            <AsyncButton className="btn-primary" disabled={!(Number(pay.amount) > 0) || payTooBig} onClick={async () => {
               const ok = await attempt(() => invoiceRepo.recordPayment(invoice.id, Number(pay.amount), pay.method, pay.notes, localUser.id));
               if (ok) { setPay(null); load(); }
-            }}><Icon name="check" size={13}/>{t('Record')}</button>
+            }}><Icon name="check" size={13}/>{t('Record')}</AsyncButton>
           </>}>
           {payTooBig && <div className="auth-error">{t('Amount exceeds what is due ({amount}).', { amount: money(Math.max(due, 0), currency) })}</div>}
           {error && <div className="auth-error">{error}</div>}
@@ -159,10 +159,10 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
         <Modal title={t('Void invoice')} onClose={voidGuard.requestClose}
           footer={<>
             <button className="btn-ghost" onClick={voidGuard.requestClose}>{t('Keep')}</button>
-            <button className="btn-danger" disabled={!voidReason} onClick={async () => {
+            <AsyncButton className="btn-danger" disabled={!voidReason} onClick={async () => {
               await invoiceRepo.void(invoice.id, voidReason, localUser.id);
               setVoidReason(null); load();
-            }}>{t('Void invoice')}</button>
+            }}>{t('Void invoice')}</AsyncButton>
           </>}>
           <Field label={t('Reason (required)')}><input value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder={t('e.g. Billing error — reissued')}/></Field>
           {voidGuard.prompt}

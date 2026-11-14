@@ -7,6 +7,9 @@ import { flushReports } from './lib/bugreport.js';
 import { onNavigateRequest } from './lib/nav.js';
 import { onDataChanged } from './lib/dbx.js';
 import { inventoryRepo, patientRepo } from './lib/repos.js';
+import { fault } from './lib/faults.js';
+import { ErrorBoundary } from './error-boundary.jsx';
+import { Toasts, installGlobalErrorHandlers } from './toast.jsx';
 import { SignInPage } from './pages/signin.jsx';
 import { HomePage } from './pages/home.jsx';
 import { CalendarPage } from './pages/calendar.jsx';
@@ -23,6 +26,13 @@ const PAGES = {
   closeout: CloseoutPage, settings: SettingsPage,
 };
 
+// Renders the current page; the DOC_FAULT "render:<page>" test hook throws here
+// so the e2e suite can check the error screen.
+const PageHost = ({ name, Page, ...props }) => {
+  fault(`render:${name}`);
+  return <Page {...props}/>;
+};
+
 const Main = () => {
   useLang(); // subscribe: a language switch re-renders the whole app, so every t() updates
   const { loading, session, localUser } = useAuth();
@@ -37,6 +47,8 @@ const Main = () => {
     });
     return onNavigateRequest((page, params) => setRoute({ page, params }));
   }, []);
+
+  useEffect(installGlobalErrorHandlers, []);
 
   useEffect(() => {
     if (!session) return;
@@ -78,13 +90,21 @@ const Main = () => {
 
   const Page = PAGES[route.page] || HomePage;
   const onNavigate = (page, params = null) => setRoute({ page, params });
-  return <Page onNavigate={onNavigate} params={route.params} badges={badges} key={route.page + JSON.stringify(route.params)}/>;
+  // The key remounts the page — and resets its error boundary — on navigation.
+  return (
+    <ErrorBoundary key={route.page + JSON.stringify(route.params)} onHome={() => onNavigate('home')}>
+      <PageHost name={route.page} Page={Page} onNavigate={onNavigate} params={route.params} badges={badges}/>
+    </ErrorBoundary>
+  );
 };
 
 export const App = () => (
   <LangProvider>
     <AuthProvider>
-      <Main/>
+      <ErrorBoundary>
+        <Main/>
+      </ErrorBoundary>
+      <Toasts/>
     </AuthProvider>
   </LangProvider>
 );

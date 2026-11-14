@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
-import { Field, money, fmtDate, EmptyState } from '../components.jsx';
+import { Field, money, fmtDate, EmptyState, AsyncButton } from '../components.jsx';
 import { closeoutRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -71,9 +71,9 @@ export const CloseoutPage = ({ onNavigate, badges }) => {
                       })}
                       {todayCloseout.notes ? ` — ${todayCloseout.notes}` : ''}
                     </div>
-                    <button className="btn-ghost" style={{ marginTop: 12 }} onClick={() => closeoutRepo.reopen(todayCloseout.id)}>
+                    <AsyncButton className="btn-ghost" style={{ marginTop: 12 }} onClick={() => closeoutRepo.reopen(todayCloseout.id)}>
                      {t('Reopen day (Dentist action)')}
-                    </button>
+                    </AsyncButton>
                   </div>
                 </div>
               ) : (
@@ -89,9 +89,9 @@ export const CloseoutPage = ({ onNavigate, badges }) => {
                       </Field>
                     </div>
                     <div>
-                      <button className="btn-primary" disabled={counted === ''} onClick={confirm}>
+                      <AsyncButton className="btn-primary" disabled={counted === ''} onClick={confirm}>
                         <Icon name="check" size={13}/>{t('Confirm closeout')}
-                      </button>
+                      </AsyncButton>
                     </div>
                   </div>
                 </div>

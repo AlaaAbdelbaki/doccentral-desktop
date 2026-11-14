@@ -11,10 +11,10 @@ const ROOT = path.join(__dirname, '..', '..');
 
 // Launch the app on a data dir, simulating a PC whose display language is
 // `systemLanguage` (Chromium's --lang switch drives navigator.language).
-const launchApp = (dataDir, { systemLanguage = 'en-US', videoDir } = {}) => electron.launch({
+const launchApp = (dataDir, { systemLanguage = 'en-US', videoDir, faults } = {}) => electron.launch({
   args: ['.', `--lang=${systemLanguage}`],
   cwd: ROOT,
-  env: { ...process.env, DOC_DEV_AUTOLOGIN: '1', DOC_DATA_DIR: dataDir },
+  env: { ...process.env, DOC_DEV_AUTOLOGIN: '1', DOC_DATA_DIR: dataDir, DOC_FAULT: faults || '' },
   ...(videoDir ? { recordVideo: { dir: videoDir, size: { width: 1440, height: 900 } } } : {}),
 });
 
@@ -48,6 +48,11 @@ const test = base.test.extend({
   // The PC language the app sees. English by default so the suite behaves the
   // same on any machine (a French Windows would otherwise open in French).
   systemLanguage: ['en-US', { option: true }],
+  // DOC_FAULT test hook (src/lib/faults.js): e.g. test.use({ faults: 'checkIn' }).
+  faults: ['', { option: true }],
+  // Page errors a test causes on purpose (e.g. an injected render crash, which
+  // React's development build re-reports after the error boundary caught it).
+  expectedPageErrors: [[], { option: true }],
 
   dataDir: async ({}, use) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dc-e2e-'));
@@ -56,9 +61,9 @@ const test = base.test.extend({
     try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch { /* temp dir */ }
   },
 
-  app: async ({ dataDir, systemLanguage }, use, testInfo) => {
+  app: async ({ dataDir, systemLanguage, faults }, use, testInfo) => {
     const videoDir = testInfo.outputPath('video');
-    const app = await launchApp(dataDir, { systemLanguage, videoDir });
+    const app = await launchApp(dataDir, { systemLanguage, videoDir, faults });
     await use(app);
     await closeApp(app);
     for (const f of fs.existsSync(videoDir) ? fs.readdirSync(videoDir) : []) {
@@ -66,7 +71,7 @@ const test = base.test.extend({
     }
   },
 
-  page: async ({ app }, use, testInfo) => {
+  page: async ({ app, expectedPageErrors }, use, testInfo) => {
     const page = await app.firstWindow();
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -74,7 +79,8 @@ const test = base.test.extend({
     await base.expect(page.locator('.side-user-name')).toHaveText(/Karim/, { timeout: 45_000 });
     await use(page);
     await testInfo.attach('final', { body: await page.screenshot(), contentType: 'image/png' });
-    base.expect(errors, 'uncaught renderer errors').toEqual([]);
+    const unexpected = errors.filter((m) => !expectedPageErrors.some((re) => re.test(m)));
+    base.expect(unexpected, 'uncaught renderer errors').toEqual([]);
   },
 });
 

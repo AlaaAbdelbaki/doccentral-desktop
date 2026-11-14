@@ -25,12 +25,15 @@ const attachmentsDir = () => {
 let logger = null;
 
 function registerIpc(win) {
-  support.register({ app, ipcMain, dialog, screen, win, dataDir: app.getPath('userData'), logger });
-  ipcMain.handle('db:all', (_e, sql, params) => db.all(sql, params || []));
-  ipcMain.handle('db:get', (_e, sql, params) => db.get(sql, params || []));
-  ipcMain.handle('db:run', (_e, sql, params) => db.run(sql, params || []));
+  // Every handler goes through wrapIpc: failures are logged and returned as
+  // structured errors (see preload.js).
+  const ipc = support.wrapIpc(ipcMain, logger);
+  support.register({ app, ipcMain: ipc, dialog, screen, win, dataDir: app.getPath('userData'), logger });
+  ipc.handle('db:all', (_e, sql, params) => db.all(sql, params || []));
+  ipc.handle('db:get', (_e, sql, params) => db.get(sql, params || []));
+  ipc.handle('db:run', (_e, sql, params) => db.run(sql, params || []));
 
-  ipcMain.handle('files:pick', async () => {
+  ipc.handle('files:pick', async () => {
     const res = await dialog.showOpenDialog(win, {
       properties: ['openFile'],
       filters: [
@@ -44,20 +47,20 @@ function registerIpc(win) {
     return { path: p, name: path.basename(p), size: stat.size };
   });
 
-  ipcMain.handle('files:import', (_e, srcPath) => {
+  ipc.handle('files:import', (_e, srcPath) => {
     const name = path.basename(srcPath);
     const dest = path.join(attachmentsDir(), `${crypto.randomUUID()}-${name}`);
     fs.copyFileSync(srcPath, dest);
     return { storagePath: dest, size: fs.statSync(dest).size, name };
   });
 
-  ipcMain.handle('files:open', (_e, storagePath) => shell.openPath(storagePath));
+  ipc.handle('files:open', (_e, storagePath) => shell.openPath(storagePath));
 
-  ipcMain.handle('app:openExternal', (_e, url) => {
+  ipc.handle('app:openExternal', (_e, url) => {
     if (/^https:\/\//.test(url)) shell.openExternal(url);
   });
 
-  ipcMain.handle('files:dataUrl', (_e, storagePath) => {
+  ipc.handle('files:dataUrl', (_e, storagePath) => {
     try {
       const ext = path.extname(storagePath).toLowerCase();
       const mime = MIME[ext];
@@ -70,10 +73,13 @@ function registerIpc(win) {
     }
   });
 
-  ipcMain.handle('app:info', () => ({
+  ipc.handle('app:info', () => ({
     devAutologin: !!devEnv.DOC_DEV_AUTOLOGIN,
     testLogin: devEnv.DOC_TEST_LOGIN || null,
     initialPage: devEnv.DOC_PAGE || null,
+    // Test hook: comma-separated fault names (e.g. "checkIn,render:inventory")
+    // that make the page throw on purpose. Ignored in packaged builds.
+    faults: devEnv.DOC_FAULT || null,
     userData: app.getPath('userData'),
     version: app.getVersion(),
   }));

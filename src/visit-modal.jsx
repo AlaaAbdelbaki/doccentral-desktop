@@ -2,7 +2,7 @@
 // performed treatments, clinical notes, auto-generated draft invoice on completion.
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from './icons.jsx';
-import { Modal, Field, useDirtyGuard, money, fmtDateTime, StatusPill, statusLabel } from './components.jsx';
+import { Modal, Field, useDirtyGuard, money, fmtDateTime, StatusPill, statusLabel, AsyncButton } from './components.jsx';
 import { visitRepo, planRepo, invoiceRepo } from './lib/repos.js';
 import { useAuth } from './lib/auth.jsx';
 import { t } from './lib/i18n.jsx';
@@ -82,19 +82,19 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
       footer={
         <>
           {visit.status === 'checked_in' && (
-            <button className="btn-primary" onClick={async () => { await visitRepo.start(visit.id); reload(); }}>
+            <AsyncButton className="btn-primary" onClick={async () => { await visitRepo.start(visit.id); reload(); }}>
               <Icon name="arrow-right" size={13}/>{t('Start treatment')}
-            </button>
+            </AsyncButton>
           )}
           {visit.status === 'in_progress' && (
-            <button className="btn-primary" onClick={complete}><Icon name="check" size={13}/>{t('Complete visit')}</button>
+            <AsyncButton className="btn-primary" onClick={complete}><Icon name="check" size={13}/>{t('Complete visit')}</AsyncButton>
           )}
           {locked && (
-            <button className="btn-ghost" onClick={async () => { await visitRepo.unlock(visit.id); reload(); }}>
+            <AsyncButton className="btn-ghost" onClick={async () => { await visitRepo.unlock(visit.id); reload(); }}>
              {t('Unlock visit')}
-            </button>
+            </AsyncButton>
           )}
-          {!locked && <button className="btn-ghost" onClick={close}>{t('Save & close')}</button>}
+          {!locked && <AsyncButton className="btn-ghost" onClick={close}>{t('Save & close')}</AsyncButton>}
           {locked && <button className="btn-ghost" onClick={onClose}>{t('Close')}</button>}
         </>
       }>
@@ -128,7 +128,7 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
                 <td className="num">{t.quantity}</td>
                 <td className="num" style={{ textAlign: 'end' }}>{money(t.unit_price * t.quantity, currency)}</td>
                 <td style={{ textAlign: 'end' }}>
-                  {!locked && <button className="btn-ghost" onClick={async () => { await visitRepo.removeTreatment(t.id); reload(); }}><Icon name="x" size={12}/></button>}
+                  {!locked && <AsyncButton className="btn-ghost" onClick={async () => { await visitRepo.removeTreatment(t.id); reload(); }}><Icon name="x" size={12}/></AsyncButton>}
                 </td>
               </tr>
             ))}
@@ -141,7 +141,7 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
             <input className="input-text" placeholder={t('Procedure (free text)')} value={row.name} onChange={(e) => setRow({ ...row, name: e.target.value })}/>
             <input className="input-text" placeholder={t('Price')} type="number" min="0" value={row.price} onChange={(e) => setRow({ ...row, price: e.target.value })}/>
             <input className="input-text" type="number" min="1" value={row.qty} onChange={(e) => setRow({ ...row, qty: e.target.value })}/>
-            <button className="btn-ghost" onClick={addRow}><Icon name="plus" size={12}/>{t('Add')}</button>
+            <AsyncButton className="btn-ghost" onClick={addRow}><Icon name="plus" size={12}/>{t('Add')}</AsyncButton>
           </div>
         )}
       </div>
@@ -156,9 +156,9 @@ export const VisitModal = ({ visit: initial, patientName, currency, onClose, onI
                 <div className="wait-sub">{t('est. {amount} · session {n}', { amount: money(p.estimated_unit_price, currency), n: p.sequence_number })}</div>
               </div>
               <StatusPill status={p.status}/>
-              <button className="btn-ghost" onClick={async () => { await planRepo.markPerformed(p, visit, localUser.id); reload(); }}>
+              <AsyncButton className="btn-ghost" onClick={async () => { await planRepo.markPerformed(p, visit, localUser.id); reload(); }}>
                 <Icon name="check" size={12}/>{t('Mark performed')}
-              </button>
+              </AsyncButton>
             </div>
           ))}
         </div>

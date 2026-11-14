@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
-import { Modal, Field, useDirtyGuard, money, fmtDate, fmtDateTime, age, fullName, Avatar, StatusPill, EmptyState, toDateInput } from '../components.jsx';
+import { Modal, Field, useDirtyGuard, money, fmtDate, fmtDateTime, age, fullName, Avatar, StatusPill, EmptyState, toDateInput, AsyncButton } from '../components.jsx';
 import { patientRepo, planRepo, visitRepo, invoiceRepo, attachmentRepo, appointmentRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -32,7 +32,7 @@ const PatientFormModal = ({ patient, onClose }) => {
     <Modal title={patient ? t('Edit patient') : t('Add patient')} onClose={guard.requestClose}
       footer={<>
         <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
-        <button className="btn-primary" disabled={!valid} onClick={save}><Icon name="check" size={13}/>{t('Save')}</button>
+        <AsyncButton className="btn-primary" disabled={!valid} onClick={save}><Icon name="check" size={13}/>{t('Save')}</AsyncButton>
       </>}>
       <div className="form-row">
         <Field label={t('First name')}><input required value={form.first_name} onChange={set('first_name')}/></Field>
@@ -75,7 +75,7 @@ const PlanFormModal = ({ patient, presetTooth, onClose, onSaved }) => {
     <Modal title={t('Add planned treatment — {name}', { name: fullName(patient) })} onClose={guard.requestClose}
       footer={<>
         <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
-        <button className="btn-primary" disabled={!form.name.trim()} onClick={save}><Icon name="check" size={13}/>{t('Add to plan')}</button>
+        <AsyncButton className="btn-primary" disabled={!form.name.trim()} onClick={save}><Icon name="check" size={13}/>{t('Add to plan')}</AsyncButton>
       </>}>
       {error && <div className="auth-error">{error}</div>}
       <Field label={t('Procedure (required)')}>
@@ -122,7 +122,7 @@ const PlanTab = ({ patient, currency }) => {
               <td className="num" style={{ textAlign: 'end' }}>{money(p.estimated_unit_price, currency)}</td>
               <td style={{ textAlign: 'end' }}>
                 {p.status === 'planned' && (
-                  <button className="btn-ghost" onClick={async () => { await planRepo.cancel(p.id); load(); }}><Icon name="x" size={12}/></button>
+                  <AsyncButton className="btn-ghost" onClick={async () => { await planRepo.cancel(p.id); load(); }}><Icon name="x" size={12}/></AsyncButton>
                 )}
               </td>
             </tr>
@@ -441,10 +441,10 @@ export const PatientsPage = ({ onNavigate, badges, params }) => {
         <Modal title={t('Delete patient')} onClose={() => setModal(null)}
           footer={<>
             <button className="btn-ghost" onClick={() => setModal(null)}>{t('Cancel')}</button>
-            <button className="btn-danger" onClick={async () => {
+            <AsyncButton className="btn-danger" onClick={async () => {
               await patientRepo.remove(modal.patient.id);
               setSelId(null); setModal(null);
-            }}><Icon name="x" size={13}/>{t('Delete (soft)')}</button>
+            }}><Icon name="x" size={13}/>{t('Delete (soft)')}</AsyncButton>
           </>}>
           <div style={{ fontSize: 13.5 }}>
            {t('Remove {name} from the roster? The record is soft-deleted and kept in the database for history and sync.', { name: fullName(modal.patient) })}

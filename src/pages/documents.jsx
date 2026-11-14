@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
-import { Modal, Field, fmtDate, fullName, EmptyState } from '../components.jsx';
+import { Modal, Field, fmtDate, fullName, EmptyState, AsyncButton } from '../components.jsx';
 import { attachmentRepo, patientRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -96,7 +96,7 @@ export const DocumentsPage = ({ onNavigate, badges }) => {
         <Modal title={t('Upload — {file}', { file: uploading.picked.name })} onClose={() => setUploading(null)}
           footer={<>
             <button className="btn-ghost" onClick={() => setUploading(null)}>{t('Cancel')}</button>
-            <button className="btn-primary" disabled={!uploading.patientId} onClick={confirmUpload}><Icon name="check" size={13}/>{t('Upload')}</button>
+            <AsyncButton className="btn-primary" disabled={!uploading.patientId} onClick={confirmUpload}><Icon name="check" size={13}/>{t('Upload')}</AsyncButton>
           </>}>
           <Field label={t('Attach to patient')}>
             <select value={uploading.patientId} onChange={(e) => setUploading({ ...uploading, patientId: e.target.value })}>

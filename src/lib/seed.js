@@ -4,10 +4,13 @@ import { get } from './dbx.js';
 import {
   patientRepo, appointmentRepo, visitRepo, planRepo, invoiceRepo, inventoryRepo,
 } from './repos.js';
+import { withoutFaults } from './faults.js';
 
 const at = (h, m = 0) => { const d = new Date(); d.setHours(h, m, 0, 0); return d.toISOString(); };
 
-export async function seedDemoData(userId) {
+export const seedDemoData = (userId) => withoutFaults(() => seed(userId));
+
+async function seed(userId) {
   const existing = await get(`SELECT COUNT(*) AS n FROM patients WHERE deleted_at IS NULL`);
   if (existing.n > 0) return false;
 

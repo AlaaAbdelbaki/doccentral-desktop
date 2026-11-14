@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar, SyncPill } from '../shell.jsx';
-import { Modal, Field, useDirtyGuard, initialsOf, roleLabel, roleName, fmtTime } from '../components.jsx';
+import { Modal, Field, useDirtyGuard, initialsOf, roleLabel, roleName, fmtTime, AsyncButton } from '../components.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { useLang, t, systemLanguage } from '../lib/i18n.jsx';
 
@@ -28,9 +28,9 @@ const AddStaffModal = ({ onClose }) => {
     <Modal title={t('Add staff user')} onClose={guard.requestClose}
       footer={<>
         <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
-        <button className="btn-primary" disabled={!form.firstName || !form.email || form.password.length < 6} onClick={save}>
+        <AsyncButton className="btn-primary" disabled={!form.firstName || !form.email || form.password.length < 6} onClick={save}>
           <Icon name="check" size={13}/>{t('Create user')}
-        </button>
+        </AsyncButton>
       </>}>
       {error && <div className="auth-error">{error}</div>}
       <div className="form-row">
@@ -65,9 +65,9 @@ const ProfileSection = () => {
     <div className="card">
       <div className="card-head">
         <span className="card-title">{t('My profile')}</span>
-        <button className="btn-primary" style={{ marginInlineStart: 'auto', height: 30 }} disabled={!form.first_name.trim()} onClick={save}>
+        <AsyncButton className="btn-primary" style={{ marginInlineStart: 'auto', height: 30 }} disabled={!form.first_name.trim()} onClick={save}>
           <Icon name="check" size={13}/>{saved ? t('Saved') : t('Save')}
-        </button>
+        </AsyncButton>
       </div>
       <div className="card-body">
         <div className="dl-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
@@ -124,7 +124,7 @@ export const SettingsPage = ({ onNavigate, badges, params }) => {
         <Topbar title={<span style={{ fontFamily: 'var(--font-serif)', fontWeight: 500 }}>{t('Settings')}</span>}
           subtitle={clinic?.name}
           actions={section === 'clinic'
-            ? <button className="btn-primary" onClick={saveClinic}><Icon name="check" size={14}/>{saved ? t('Saved') : t('Save changes')}</button>
+            ? <AsyncButton className="btn-primary" onClick={saveClinic}><Icon name="check" size={14}/>{saved ? t('Saved') : t('Save changes')}</AsyncButton>
             : null}/>
         <div className="content">
           <div className="settings-layout">
@@ -274,10 +274,10 @@ export const SettingsPage = ({ onNavigate, badges, params }) => {
                         <div><div className="sr-label">{t('Demo data')}</div>
                           <div className="sr-desc">{t('Seed sample patients, appointments, inventory (only if the database is empty).')}</div></div>
                         <div className="sr-control">
-                          <button className="btn-ghost" onClick={async () => {
+                          <AsyncButton className="btn-ghost" onClick={async () => {
                             const ok = await seedDemoData(localUser.id);
                             alert(ok ? t('Demo data loaded.') : t('Database not empty — skipped.'));
-                          }}>{t('Load demo data')}</button>
+                          }}>{t('Load demo data')}</AsyncButton>
                         </div>
                       </div>
                       <div className="setting-row">

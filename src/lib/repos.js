@@ -2,6 +2,7 @@
 // mirroring the Flutter app's feature set and lifecycle rules from the PRD.
 import { all, get, run, insert, update, softDelete, nowIso, emitDataChanged } from './dbx.js';
 import { t } from './translate.js';
+import { fault } from './faults.js';
 
 const LIVE = 'deleted_at IS NULL';
 const dayRange = (date) => {
@@ -110,6 +111,7 @@ export const appointmentRepo = {
     emitDataChanged();
   },
   checkIn: async (appt, actorUserId) => {
+    fault('checkIn');
     await update('appointments', appt.id, { status: 'checked_in' });
     const visit = await insert('visits', {
       appointment_id: appt.id, patient_id: appt.patient_id,
