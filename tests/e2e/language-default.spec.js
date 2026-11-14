@@ -1,7 +1,7 @@
 // Default language: follows the PC's display language (French / Arabic),
 // falls back to English otherwise, and a language picked by the user wins and
 // is remembered across restarts. The PC language is simulated with --lang.
-const { test, expect, snap, launchApp } = require('./fixtures');
+const { test, expect, snap, launchApp, closeApp } = require('./fixtures');
 
 const NAV_HOME = { en: 'Home', fr: 'Accueil', ar: 'الرئيسية' };
 const homeLabel = (page) => page.locator('.side .nav-item').first();
@@ -41,7 +41,7 @@ test("a picked language is remembered and wins over the PC's language", async ({
   // 2. Pick English explicitly; it sticks after a restart on the same Arabic PC.
   await page.locator('.setting-row', { hasText: 'English' }).last().getByRole('button').click();
   await expect(homeLabel(page)).toHaveText(NAV_HOME.en);
-  await app.close();
+  await closeApp(app);
   app = await launchApp(dataDir, { systemLanguage: 'ar-TN' });
   page = await app.firstWindow();
   await ready(page);
@@ -52,10 +52,10 @@ test("a picked language is remembered and wins over the PC's language", async ({
   await page.locator('.settings-nav a').nth(2).click();
   await page.locator('.setting-row').first().getByRole('button').click();
   await expect(homeLabel(page)).toHaveText(NAV_HOME.ar);
-  await app.close();
+  await closeApp(app);
   app = await launchApp(dataDir, { systemLanguage: 'fr-FR' }); // PC language changed meanwhile
   page = await app.firstWindow();
   await ready(page);
   await expect(homeLabel(page)).toHaveText(NAV_HOME.fr);
-  await app.close();
+  await closeApp(app);
 });
