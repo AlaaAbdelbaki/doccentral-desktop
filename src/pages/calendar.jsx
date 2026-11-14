@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
 import { DayTimeline } from '../timeline.jsx';
-import { Modal, Field, StatusPill, fmtTime, fmtDate, fullName, toDateInput, toTimeInput, combineDateTime, Avatar, statusLabel } from '../components.jsx';
+import { Modal, Field, useDirtyGuard, StatusPill, fmtTime, fmtDate, fullName, toDateInput, toTimeInput, combineDateTime, Avatar, statusLabel } from '../components.jsx';
 import { appointmentRepo, patientRepo, userRepo, visitRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -20,7 +20,7 @@ const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); r
 const startOfWeek = (d) => { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); x.setHours(0, 0, 0, 0); return x; };
 
 const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
-  const [form, setForm] = useState(() => {
+  const [init] = useState(() => {
     const end = new Date(); end.setHours(end.getHours() + 1);
     return {
       patient_id: appt?.patient_id || defaults?.patientId || '',
@@ -32,6 +32,7 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
       notes: appt?.notes || '',
     };
   });
+  const [form, setForm] = useState(init);
   // Providers may finish loading after the modal mounts (e.g. Home →
   // "New appointment") — backfill the provider once the list arrives (usually
   // 1–2 people). The patient is never defaulted: a silent pick of the first
@@ -40,6 +41,8 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
     setForm((f) => ({ ...f, assigned_user_id: f.assigned_user_id || providers[0]?.id || '' }));
   }, [providers]);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // Untouched = the initial form with the auto-filled provider.
+  const guard = useDirtyGuard({ ...init, assigned_user_id: init.assigned_user_id || providers[0]?.id || '' }, form, onClose);
 
   // Searchable patient list: same order as the Patients page (repo sorts by
   // last name, first name). The selected patient always stays in the list.
@@ -77,9 +80,9 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
   };
 
   return (
-    <Modal title={appt ? t('Edit appointment') : t('New appointment')} onClose={onClose}
+    <Modal title={appt ? t('Edit appointment') : t('New appointment')} onClose={guard.requestClose}
       footer={<>
-        <button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button>
+        <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
         <button className={conflicts.length ? 'btn-danger' : 'btn-primary'} onClick={save}
                 disabled={!form.patient_id || !form.assigned_user_id || !validRange}>
           <Icon name={conflicts.length ? 'alert-tri' : 'check'} size={13}/>
@@ -124,17 +127,24 @@ const AppointmentModal = ({ appt, defaults, patients, providers, onClose }) => {
       </div>
       <Field label={t('Reason / planned treatment')}><input value={form.reason} onChange={set('reason')} placeholder={t('e.g. Root canal #30 — session 2')}/></Field>
       <Field label={t('Notes')}><textarea value={form.notes} onChange={set('notes')}/></Field>
+      {guard.prompt}
     </Modal>
   );
 };
 
 const CancelModal = ({ appt, onClose }) => {
   const { localUser } = useAuth();
-  const [reason, setReason] = useState('patient_cancelled');
-  const [notes, setNotes] = useState('');
-  const [reDate, setReDate] = useState(toDateInput(addDays(new Date(), 1).toISOString()));
-  const [reStart, setReStart] = useState(toTimeInput(appt.start_time));
-  const [reEnd, setReEnd] = useState(toTimeInput(appt.end_time));
+  const [init] = useState(() => ({
+    reason: 'patient_cancelled', notes: '',
+    reDate: toDateInput(addDays(new Date(), 1).toISOString()),
+    reStart: toTimeInput(appt.start_time), reEnd: toTimeInput(appt.end_time),
+  }));
+  const [reason, setReason] = useState(init.reason);
+  const [notes, setNotes] = useState(init.notes);
+  const [reDate, setReDate] = useState(init.reDate);
+  const [reStart, setReStart] = useState(init.reStart);
+  const [reEnd, setReEnd] = useState(init.reEnd);
+  const guard = useDirtyGuard(init, { reason, notes, reDate, reStart, reEnd }, onClose);
   const [conflicts, setConflicts] = useState([]);
   useEffect(() => {
     if (reason !== 'rescheduled' || !reStart || !reEnd || reStart >= reEnd) { setConflicts([]); return; }
@@ -156,9 +166,9 @@ const CancelModal = ({ appt, onClose }) => {
   };
 
   return (
-    <Modal title={t('Cancel — {name}', { name: `${appt.first_name} ${appt.last_name}` })} onClose={onClose}
+    <Modal title={t('Cancel — {name}', { name: `${appt.first_name} ${appt.last_name}` })} onClose={guard.requestClose}
       footer={<>
-        <button className="btn-ghost" onClick={onClose}>{t('Keep appointment')}</button>
+        <button className="btn-ghost" onClick={guard.requestClose}>{t('Keep appointment')}</button>
         <button className="btn-danger" onClick={confirm}><Icon name="x" size={13}/>{t('Confirm cancellation')}</button>
       </>}>
       <Field label={t('Reason')}>
@@ -187,6 +197,7 @@ const CancelModal = ({ appt, onClose }) => {
         </div>
       )}
       <Field label={t('Notes')}><textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('Optional context…')}/></Field>
+      {guard.prompt}
     </Modal>
   );
 };
@@ -197,7 +208,7 @@ const ApptActions = ({ appt, onClose, onEdit, onCancel, onVisit }) => {
   useEffect(() => { visitRepo.byAppointment(appt.id).then(setVisit); }, [appt.id]);
   const active = ['scheduled'].includes(appt.status);
   return (
-    <Modal title={`${appt.first_name} ${appt.last_name}`} onClose={onClose}
+    <Modal title={`${appt.first_name} ${appt.last_name}`} onClose={onClose} closeOnBackdrop
       footer={<>
         {active && <button className="btn-ghost" onClick={() => onEdit(appt)}><Icon name="calendar" size={13}/>{t('Edit')}</button>}
         {active && <button className="btn-danger" onClick={() => onCancel(appt)}>{t('Cancel / reschedule')}</button>}

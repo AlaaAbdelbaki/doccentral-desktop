@@ -12,6 +12,8 @@ export default {
   Offline: 'Hors ligne', Local: 'Local', Search: 'Rechercher',
 
   // ---- shared
+  'Discard changes?': 'Abandonner les modifications ?', 'Keep editing': 'Continuer la saisie', Discard: 'Abandonner',
+  'What you typed in this form will be lost.': 'Ce que vous avez saisi dans ce formulaire sera perdu.', 'Saving…': 'Enregistrement…',
   DT: 'DT', All: 'Tous', 'All →': 'Tout voir →', Cancel: 'Annuler', Save: 'Enregistrer', Saved: 'Enregistré',
   'Save changes': 'Enregistrer les modifications', Edit: 'Modifier', Delete: 'Supprimer', Close: 'Fermer',
   Add: 'Ajouter', Keep: 'Conserver', Record: 'Enregistrer', Switch: 'Choisir',

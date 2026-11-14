@@ -1,19 +1,67 @@
 // Shared DocCentral UI atoms/molecules built on the design system.
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from './icons.jsx';
 import { t, locale } from './lib/i18n.jsx';
 
-export const Modal = ({ title, onClose, children, footer, wide }) => (
-  <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-    <div className={`modal ${wide ? 'wide' : ''}`}>
-      <div className="modal-head">
-        <span className="modal-title">{title}</span>
-        <button className="drawer-close" style={{ marginInlineStart: 'auto' }} onClick={onClose}><Icon name="x" size={18}/></button>
+// Open modals, innermost last, so Escape closes only the topmost one.
+const modalStack = [];
+
+// Clicking the backdrop does NOT close a modal unless `closeOnBackdrop` is set
+// (read-only modals only): a stray click must never throw away typed data.
+// Escape and the X button call onClose; form modals pass a guarded close from
+// useDirtyGuard so unsaved changes trigger a "Discard changes?" prompt.
+export const Modal = ({ title, onClose, children, footer, wide, closeOnBackdrop = false }) => {
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const entry = {};
+    modalStack.push(entry);
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || modalStack[modalStack.length - 1] !== entry) return;
+      e.preventDefault();
+      closeRef.current?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      modalStack.splice(modalStack.indexOf(entry), 1);
+    };
+  }, []);
+  return (
+    <div className="modal-backdrop" onMouseDown={(e) => { if (closeOnBackdrop && e.target === e.currentTarget) onClose(); }}>
+      <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true">
+        <div className="modal-head">
+          <span className="modal-title">{title}</span>
+          <button className="drawer-close" style={{ marginInlineStart: 'auto' }} onClick={onClose}><Icon name="x" size={18}/></button>
+        </div>
+        <div className="modal-body">{children}</div>
+        {footer && <div className="modal-foot">{footer}</div>}
       </div>
-      <div className="modal-body">{children}</div>
-      {footer && <div className="modal-foot">{footer}</div>}
     </div>
-  </div>
-);
+  );
+};
+
+// Guards a form modal against losing typed data. `initial` is what the form
+// looks like untouched, `current` what it looks like now (plain values).
+// Use `requestClose` for X / Escape / Cancel and render `prompt` inside the
+// modal: closing while dirty asks "Discard changes?" first.
+export const useDirtyGuard = (initial, current, onClose) => {
+  const [asking, setAsking] = useState(false);
+  const dirty = JSON.stringify(initial) !== JSON.stringify(current);
+  const requestClose = () => (dirty ? setAsking(true) : onClose());
+  // Reset first: the guard may outlive the form (e.g. invoice sub-forms).
+  const discard = () => { setAsking(false); onClose(); };
+  const prompt = asking ? (
+    <Modal title={t('Discard changes?')} onClose={() => setAsking(false)}
+      footer={<>
+        <button className="btn-ghost" onClick={() => setAsking(false)}>{t('Keep editing')}</button>
+        <button className="btn-danger" onClick={discard}>{t('Discard')}</button>
+      </>}>
+      <div style={{ fontSize: 13.5 }}>{t('What you typed in this form will be lost.')}</div>
+    </Modal>
+  ) : null;
+  return { dirty, requestClose, prompt };
+};
 
 export const Field = ({ label, children }) => (
   <div className="field"><label>{label}</label>{children}</div>

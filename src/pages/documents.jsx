@@ -110,7 +110,7 @@ export const DocumentsPage = ({ onNavigate, badges }) => {
       )}
 
       {preview && (
-        <Modal wide title={preview.file_name} onClose={() => setPreview(null)}
+        <Modal wide closeOnBackdrop title={preview.file_name} onClose={() => setPreview(null)}
           footer={<button className="btn-ghost" onClick={() => window.dc.files.open(preview.storage_path)}>{t('Open in system viewer')}</button>}>
           <img className="attach-preview" src={preview.dataUrl} alt={preview.file_name}/>
         </Modal>

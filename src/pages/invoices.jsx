@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar } from '../shell.jsx';
-import { Modal, Field, money, fmtDate, fullName, Avatar, StatusPill, EmptyState, statusLabel } from '../components.jsx';
+import { Modal, Field, useDirtyGuard, money, fmtDate, fullName, Avatar, StatusPill, EmptyState, statusLabel } from '../components.jsx';
 import { invoiceRepo, patientRepo } from '../lib/repos.js';
 import { useAuth } from '../lib/auth.jsx';
 import { onDataChanged } from '../lib/dbx.js';
@@ -22,6 +22,13 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
   const [pay, setPay] = useState(null); // {amount, method, notes}
   const [voidReason, setVoidReason] = useState(null);
   const [error, setError] = useState(null);
+  // Sub-forms remember how they looked when opened, for the discard prompt.
+  const [opened, setOpened] = useState({});
+  const openAdj = (v) => { setError(null); setAdj(v); setOpened((o) => ({ ...o, adj: v })); };
+  const openPay = (v) => { setError(null); setPay(v); setOpened((o) => ({ ...o, pay: v })); };
+  const adjGuard = useDirtyGuard(opened.adj ?? null, adj, () => setAdj(null));
+  const payGuard = useDirtyGuard(opened.pay ?? null, pay, () => setPay(null));
+  const voidGuard = useDirtyGuard('', voidReason ?? '', () => setVoidReason(null));
   // Run a repository action; surface validation errors inside the sub-modal.
   const attempt = async (fn) => {
     setError(null);
@@ -47,10 +54,10 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
   return (
     <Modal wide title={<span>{t('Invoice')} <span style={{ marginInlineStart: 8 }}><StatusPill status={invoice.status}/></span></span>} onClose={onClose}
       footer={<>
-        {isDraft && <button className="btn-ghost" onClick={() => { setError(null); setAdj({ type: 'discount', description: '', amount: '' }); }}>{t('Add discount')}</button>}
-        {isDraft && <button className="btn-ghost" onClick={() => { setError(null); setAdj({ type: 'surcharge', description: '', amount: '' }); }}>{t('Add surcharge')}</button>}
+        {isDraft && <button className="btn-ghost" onClick={() => openAdj({ type: 'discount', description: '', amount: '' })}>{t('Add discount')}</button>}
+        {isDraft && <button className="btn-ghost" onClick={() => openAdj({ type: 'surcharge', description: '', amount: '' })}>{t('Add surcharge')}</button>}
         {isDraft && <button className="btn-primary" onClick={async () => { await invoiceRepo.finalize(invoice.id); load(); }}><Icon name="check" size={13}/>{t('Finalize')}</button>}
-        {payable && <button className="btn-primary" onClick={() => { setError(null); setPay({ amount: due.toFixed(2), method: 'cash', notes: '' }); }}><Icon name="dollar" size={13}/>{t('Record payment')}</button>}
+        {payable && <button className="btn-primary" onClick={() => openPay({ amount: due.toFixed(2), method: 'cash', notes: '' })}><Icon name="dollar" size={13}/>{t('Record payment')}</button>}
         {!isVoid && invoice.status !== 'paid' && <button className="btn-danger" onClick={() => setVoidReason('')}>{t('Void')}</button>}
         <button className="btn-ghost" onClick={onClose}>{t('Close')}</button>
       </>}>
@@ -104,9 +111,9 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
       </div>
 
       {adj && (
-        <Modal title={adjLabel(adj.type)} onClose={() => setAdj(null)}
+        <Modal title={adjLabel(adj.type)} onClose={adjGuard.requestClose}
           footer={<>
-            <button className="btn-ghost" onClick={() => setAdj(null)}>{t('Cancel')}</button>
+            <button className="btn-ghost" onClick={adjGuard.requestClose}>{t('Cancel')}</button>
             <button className="btn-primary" disabled={!(Number(adj.amount) > 0) || adjTooBig} onClick={async () => {
               const ok = await attempt(() => invoiceRepo.addAdjustment(invoice.id, adj.type, adj.description || adjKind(adj.type), Number(adj.amount)));
               if (ok) { setAdj(null); load(); }
@@ -116,13 +123,14 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
           {error && <div className="auth-error">{error}</div>}
           <Field label={t('Description')}><input value={adj.description} onChange={(e) => setAdj({ ...adj, description: e.target.value })} placeholder={adj.type === 'discount' ? t('e.g. Loyalty discount') : t('e.g. After-hours surcharge')}/></Field>
           <Field label={t('Amount ({currency})', { currency })}><input type="number" min="0" value={adj.amount} onChange={(e) => setAdj({ ...adj, amount: e.target.value })}/></Field>
+          {adjGuard.prompt}
         </Modal>
       )}
 
       {pay && (
-        <Modal title={t('Record payment')} onClose={() => setPay(null)}
+        <Modal title={t('Record payment')} onClose={payGuard.requestClose}
           footer={<>
-            <button className="btn-ghost" onClick={() => setPay(null)}>{t('Cancel')}</button>
+            <button className="btn-ghost" onClick={payGuard.requestClose}>{t('Cancel')}</button>
             <button className="btn-primary" disabled={!(Number(pay.amount) > 0) || payTooBig} onClick={async () => {
               const ok = await attempt(() => invoiceRepo.recordPayment(invoice.id, Number(pay.amount), pay.method, pay.notes, localUser.id));
               if (ok) { setPay(null); load(); }
@@ -143,19 +151,21 @@ const InvoiceModal = ({ invoiceId, currency, onClose }) => {
           </div>
           <Field label={t('Notes')}><input value={pay.notes} onChange={(e) => setPay({ ...pay, notes: e.target.value })} placeholder={t('e.g. Partial — rest next visit')}/></Field>
           <div style={{ fontSize: 12.5, color: 'var(--ink-500)' }}>{t('Due: {amount} — a lower amount records a partial payment.', { amount: money(Math.max(due, 0), currency) })}</div>
+          {payGuard.prompt}
         </Modal>
       )}
 
       {voidReason !== null && (
-        <Modal title={t('Void invoice')} onClose={() => setVoidReason(null)}
+        <Modal title={t('Void invoice')} onClose={voidGuard.requestClose}
           footer={<>
-            <button className="btn-ghost" onClick={() => setVoidReason(null)}>{t('Keep')}</button>
+            <button className="btn-ghost" onClick={voidGuard.requestClose}>{t('Keep')}</button>
             <button className="btn-danger" disabled={!voidReason} onClick={async () => {
               await invoiceRepo.void(invoice.id, voidReason, localUser.id);
               setVoidReason(null); load();
             }}>{t('Void invoice')}</button>
           </>}>
           <Field label={t('Reason (required)')}><input value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder={t('e.g. Billing error — reissued')}/></Field>
+          {voidGuard.prompt}
         </Modal>
       )}
     </Modal>

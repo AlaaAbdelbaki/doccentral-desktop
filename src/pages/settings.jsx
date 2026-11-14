@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
 import { Sidebar, Topbar, SyncPill } from '../shell.jsx';
-import { Modal, Field, initialsOf, roleLabel, roleName, fmtTime } from '../components.jsx';
+import { Modal, Field, useDirtyGuard, initialsOf, roleLabel, roleName, fmtTime } from '../components.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { useLang, t, systemLanguage } from '../lib/i18n.jsx';
 
@@ -16,16 +16,18 @@ import { SUPABASE_URL } from '../lib/config.js';
 
 const AddStaffModal = ({ onClose }) => {
   const { addStaff } = useAuth();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', roleName: 'Assistant' });
+  const [init] = useState({ firstName: '', lastName: '', email: '', password: '', roleName: 'Assistant' });
+  const [form, setForm] = useState(init);
+  const guard = useDirtyGuard(init, form, onClose);
   const [error, setError] = useState(null);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const save = async () => {
     try { await addStaff(form); onClose(); } catch (e) { setError(e.message || String(e)); }
   };
   return (
-    <Modal title={t('Add staff user')} onClose={onClose}
+    <Modal title={t('Add staff user')} onClose={guard.requestClose}
       footer={<>
-        <button className="btn-ghost" onClick={onClose}>{t('Cancel')}</button>
+        <button className="btn-ghost" onClick={guard.requestClose}>{t('Cancel')}</button>
         <button className="btn-primary" disabled={!form.firstName || !form.email || form.password.length < 6} onClick={save}>
           <Icon name="check" size={13}/>{t('Create user')}
         </button>
@@ -44,6 +46,7 @@ const AddStaffModal = ({ onClose }) => {
         </Field>
       </div>
       <Field label={t('Initial password')}><input type="password" value={form.password} onChange={set('password')} minLength={6}/></Field>
+      {guard.prompt}
     </Modal>
   );
 };
