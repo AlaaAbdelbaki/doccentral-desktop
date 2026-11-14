@@ -42,6 +42,7 @@
 - **Offline-first** — everything works without internet; changes sync every minute once back online.
 - **Safe data** — crash-proof saves, a backup per day, automatic recovery from a damaged database.
 - **English, French and Arabic** — with a full right-to-left layout in Arabic; follows the Windows language by default.
+- **Report a problem** — from the sidebar: a description, files or a screenshot, and optionally device information and app logs, previewed before sending.
 
 | Patients | Arabic (right-to-left) |
 | --- | --- |
@@ -94,9 +95,10 @@ In the Supabase SQL editor, run in order:
 
 1. [`supabase/migrations/0001_init_doccentral.sql`](supabase/migrations/0001_init_doccentral.sql) — tables
 2. [`supabase/migrations/0002_clinic_isolation_and_sync.sql`](supabase/migrations/0002_clinic_isolation_and_sync.sql) — access rules and sync
+3. [`supabase/migrations/0003_bug_reports.sql`](supabase/migrations/0003_bug_reports.sql) — bug reports
 
-Or copy both at once from the app: **Settings → Data & sync → Copy migration
-SQL**. Both scripts are safe to run again. A project that already holds
+Or copy them all at once from the app: **Settings → Data & sync → Copy
+migration SQL**. The scripts are safe to run again. A project that already holds
 exactly one clinic has its existing rows assigned to it automatically.
 
 ### Where data is stored
@@ -105,8 +107,19 @@ exactly one clinic has its existing rows assigned to it automatically.
 | --- | --- |
 | Database | `%APPDATA%\DocCentral\doccentral.db` |
 | Daily backups (newest 7) | `%APPDATA%\DocCentral\backups\` |
+| App log (errors and warnings, personal data removed) | `%APPDATA%\DocCentral\logs\` |
+| Bug reports waiting to be sent | `%APPDATA%\DocCentral\outbox\bug-reports\` |
 
 Uninstalling keeps this folder.
+
+### Reading bug reports
+
+Reports arrive in the Supabase dashboard: **Table editor → `bug_reports`**
+(description, app version, and device information or logs when the user
+included them) and **Storage → `bug-reports`** (attachments, in
+`<reporter id>/<report id>/`). The app can only send reports, never read
+them back. A report made offline, or before the cloud is set up, is kept
+on the computer and sent automatically later.
 
 ## Project layout
 
@@ -150,6 +163,8 @@ The short version — details in **[docs/architecture.md](docs/architecture.md)*
   never hard-deleted.
 - **Saves are atomic** and backed up daily; a damaged database is detected
   on start-up and restored from the newest backup.
+- **Bug reports** carry only what the user ticks; device information and
+  logs are off by default and shown before sending.
 
 ## Development
 

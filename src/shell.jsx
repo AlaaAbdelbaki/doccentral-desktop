@@ -6,6 +6,7 @@ import { useAuth } from './lib/auth.jsx';
 import { onSyncState } from './lib/sync.js';
 import { requestNavigate } from './lib/nav.js';
 import { initialsOf, roleLabel } from './components.jsx';
+import { ReportProblemButton } from './report-problem.jsx';
 
 export const NAV = {
   clinical: [
@@ -45,6 +46,7 @@ export const Sidebar = ({ active, onNavigate, badges = {} }) => {
       {NAV.clinical.map(NavLink)}
       <div className="side-section-label">{t('Operations')}</div>
       {NAV.ops.map(NavLink)}
+      <ReportProblemButton/>
       <div className="side-footer">
         <div className="avatar online">{localUser ? initialsOf(localUser.first_name, localUser.last_name) : '·'}</div>
         <div style={{ minWidth: 0 }}>

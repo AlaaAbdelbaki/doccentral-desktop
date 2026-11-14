@@ -21,9 +21,30 @@ const SUPABASE_BOOTSTRAP = `
   grant usage on schema public to anon, authenticated;
   alter default privileges in schema public grant all on tables to anon, authenticated;
   alter default privileges in schema public grant all on functions to anon, authenticated;
+
+  -- Supabase Storage, reduced to what the policies use.
+  create schema storage;
+  grant usage on schema storage to anon, authenticated;
+  create table storage.buckets (
+    id text primary key, name text not null, public boolean default false,
+    file_size_limit bigint, allowed_mime_types text[]
+  );
+  create table storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text references storage.buckets(id), name text not null,
+    owner uuid default auth.uid(), unique (bucket_id, name)
+  );
+  alter table storage.objects enable row level security;
+  grant all on storage.objects to anon, authenticated;
+  create function storage.foldername(name text) returns text[] language sql immutable as $$
+    select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
+  $$;
+  grant execute on function storage.foldername(text) to anon, authenticated;
 `;
 
-export async function createSupabase({ migrations = ['0001', '0002'] } = {}) {
+const ALL_MIGRATIONS = fs.readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort().map((f) => f.slice(0, 4));
+
+export async function createSupabase({ migrations = ALL_MIGRATIONS } = {}) {
   const pg = new PGlite();
   await pg.exec(SUPABASE_BOOTSTRAP);
   for (const prefix of migrations) {
